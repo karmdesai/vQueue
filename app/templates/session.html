@@ -1,0 +1,20 @@
+<html>
+    <head>
+        <title>{{ title }}—vQueue</title>
+    </head>
+    <body>
+        <h3>Hello, {{ user.name }}!</h3>
+        <p>Your maximum capacity is set to <strong>{{ user.maxCapacity }}</strong> customers.</p>
+        <p>There are currently <strong>{{ status.customers }}</strong> customers inside.<p>
+
+        <h5>Take a closer look at your virtual queue!</h5>
+
+        {% for queuer in status.queue %}
+        <p>{{ queuer }} is currently <strong>#{{ status.queue.index(queuer) + 1 }}</strong> in the queue.</p>
+        {% endfor %}
+
+        <form action="/done" method="post">
+            <button name="doneButton" type="submit">I'm Done!</button>
+        </form>
+    </body>
+</html>
