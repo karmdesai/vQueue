@@ -1,1 +1,1 @@
-web gunicorn vQueue:app
+web: gunicorn vQueue:app
