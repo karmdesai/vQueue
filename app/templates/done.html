@@ -1,9 +1,25 @@
 <html>
     <head>
+        <link rel="stylesheet" media="screen" href = "{{ url_for('static', filename='bootstrap.min.css') }}">
+        <meta name="viewport" content = "width=device-width, initial-scale=1.0">
         <title>{{ title }}—vQueue</title>
     </head>
     <body>
-        <h3>You're all done with this session, {{ user.name }}!</h3>
-        <p>Your maximum capacity is set to <strong>{{ user.maxCapacity }}</strong> customers.</p>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light justify-content-center">
+            <span class="navbar-brand mb-0 h1">vQueue</span>
+        </nav>
+        <div class="d-flex justify-content-center mt-3">
+            <h2>Bye, {{ user.name }}!</h2>
+        </div>
+
+        <div class="d-flex justify-content-center mt-5">
+            <div class="btn-toolbar" role="toolbar" aria-label="Primary Buttons">
+                <div class="btn-group mr-3" role="group" aria-label="Restart Session">
+                    <form action="/restart" method="post">
+                        <button class="btn-dark btn-lg" name="restartSession" type="submit">Restart Session</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </body>
 </html>
