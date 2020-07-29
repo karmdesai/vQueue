@@ -17,7 +17,7 @@ def sendMessage(number, message):
 userAccount = {'name': 'Allwell Pharmacy', 'maxCapacity': 2, 'registeredNumber': '+16474961018', 'active': False}
 
 currentStatus = {
-    'customers': 0,
+    'customers': 2,
     'queue': []
 }
 
@@ -27,6 +27,7 @@ currentQueue = currentStatus['queue']
 @app.route('/')
 @app.route('/session')
 def session():
+    global userAccount
 
     userAccount['active'] = True
 
@@ -34,7 +35,7 @@ def session():
 
 @app.route('/restart', methods=['POST'])
 def restart():
-    session()
+    return session()
 
 @app.route('/end', methods=['POST'])
 def end():
@@ -44,7 +45,7 @@ def end():
         userAccount = {'name': 'Allwell Pharmacy', 'maxCapacity': 2, 'registeredNumber': '+16474961018', 'active': False}
 
         currentStatus = {
-            'customers': 0,
+            'customers': 2,
             'queue': []
         }
 
