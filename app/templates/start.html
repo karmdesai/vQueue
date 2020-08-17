@@ -1,0 +1,17 @@
+<html>
+    <head>
+        <link rel="stylesheet" media="screen" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+        <meta name="viewport" content = "width=device-width, initial-scale=1.0">
+        <title>{{ title }}—vQueue</title>
+    </head>
+    <body>
+        <h1>Get Started</h1>
+        <form action="{{ url_for('boot') }}" method="POST">
+            Get Name: <input type="text" name="getName">
+            Get Number: <input type="text" name="getNumber">
+            Max Capacity: <input type="number" name="maxCapacity">
+            Current Customers: <input type="number" name="currentCustomers">
+            <input type="submit" value="Start Your Session">
+        </form>
+    </body>
+</html>

@@ -1,88 +1,89 @@
 import requests
 from app import app
-from flask import render_template, request
+from flask import render_template, request, url_for, redirect, session
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
+from random import randint
 
-global userAccount
-global currentStatus
+# add a secret key to use sessions
+app.config['SECRET_KEY'] = 'changeLater'
 
-account_sid = 'ACe6de0e4556a89b8f10f9632c66035b2b'
-auth_token = 'c8cc4c6159588b410554d5361f6be43c'
-client = Client(account_sid, auth_token)
+# get user input for starting variables
+@app.route('/start')
+def start():
+    return render_template('start.html', title='Get Started')
 
-def sendMessage(number, message):
-    message = client.messages.create(body=message, from_=userAccount['registeredNumber'],to=number)
+# initialize a session using given variables
+@app.route('/boot', methods=['POST'])
+def boot():
+    # if form has been filled out...
+    if request.method == 'POST':
+        # store the variables...
+        session['businessName'] = request.form['getName']
+        session['phoneNumber'] = request.form['getNumber']
+        session['maxCapacity'] = int(request.form['maxCapacity'])
+        session['currentCustomers'] = int(request.form['currentCustomers'])
+        session['currentQueue'] = []
 
-userAccount = {'name': 'Allwell Pharmacy', 'maxCapacity': 2, 'registeredNumber': '+16474961018', 'active': False}
+        # and redirect the user to dashboard.
+        return redirect(url_for('dashboard'))
 
-currentStatus = {
-    'customers': 2,
-    'queue': []
-}
+    # otherwise...
+    else:
+        # redirect the user to the start page
+        return redirect(url_for('start'))
 
-# business variables
-currentQueue = currentStatus['queue']
-
+# session dashboard page
 @app.route('/')
-@app.route('/session')
-def session():
-    global userAccount
+@app.route('/dashboard', methods=['GET', 'POST'])
+def dashboard():
+    # if the user has initialized variables...
+    if session.get('maxCapacity') != None:
+        # return the dashboard page with updated content
+        return render_template('dashboard.html', name=session.get('businessName'), 
+            number=session.get('phoneNumber'), maxCapacity=session.get('maxCapacity'), 
+            curCustomers=session.get('currentCustomers'), curQueue=session.get('currentQueue'))
 
-    userAccount['active'] = True
+    # otherwise...
+    else:
+        # redirect the user to the start page
+        return redirect(url_for('start'))
 
-    return render_template('session.html', title='Dashboard', user=userAccount, status=currentStatus)
+@app.route('/subtract', methods=['POST'])
+def subtract():
+    # assume a customer has left the store
+    session['currentCustomers'] -= 1
 
-@app.route('/restart', methods=['POST'])
-def restart():
-    return session()
+    return redirect(url_for('dashboard'))
 
-@app.route('/end', methods=['POST'])
-def end():
-    global userAccount
+@app.route('/remove', methods=['POST'])
+def remove():
+    # look through the queue...
+    for position, eachQueuer in enumerate(session.get('currentQueue')):
+        # find the requested user's position...
+        if eachQueuer['groupName'] == request.form['removeButton']:
+            # and remove them.
+            session['currentQueue'].pop(position)
+            session.modified = True
 
-    if userAccount['active'] == True:
-        userAccount = {'name': 'Allwell Pharmacy', 'maxCapacity': 2, 'registeredNumber': '+16474961018', 'active': False}
+    return redirect(url_for('dashboard'))
+            
+@app.route('/add', methods=['POST'])
+def add():
+    # get the customers information...
+    manualCustomer = {
+        'groupName': request.form['addCustomer'],
+        'numPeople': request.form['numPeople']
+    }
 
-        currentStatus = {
-            'customers': 2,
-            'queue': []
-        }
+    # and manually add the customer to the queue.
+    session['currentQueue'].append(manualCustomer)
+    session.modified = True
 
-    return render_template('done.html', title='Done', user=userAccount)
-
-@app.route('/refresh', methods=['POST'])
-def refresh():
-    return render_template('session.html', title='Dashboard', user=userAccount, status=currentStatus)
-
-@app.route('/left', methods=['POST'])
-def left():
-    global userAccount
-    global currentStatus
-
-    if userAccount['active'] == True:
-        if (currentStatus['customers'] > 0):
-            currentStatus['customers'] -= 1
-
-            queueLength = len(currentStatus['queue'])
-
-            if (queueLength > 0):
-                sendMessage(currentStatus['queue'][0], 'You may now come inside the store. We are waiting for you!')
-                currentStatus['queue'].pop(0)
-                currentStatus['customers'] += 1
-
-                newLength = len(currentStatus['queue'])
-
-                if (newLength > 0):
-                    sendMessage(currentStatus['queue'][0], 'You are currently #1 in line. We will let you know when it is your turn.')
-
-    return render_template('session.html', title='Dashboard', user=userAccount, status=currentStatus)
+    return redirect(url_for('dashboard'))
 
 @app.route('/text', methods=['POST'])
 def text():
-    global userAccount
-    global currentStatus
-    
     # get the incoming message
     sentFrom = request.values.get('From', None)
     incomingMessage = request.values.get('Body', None).upper()
@@ -91,76 +92,3 @@ def text():
     response = MessagingResponse()
     message = response.message()
     haveResponded = False
-
-    if userAccount['active'] == True:
-        # when user texts the bot...
-        if 'HELLO' in incomingMessage:
-            # let them know the max amount of customers allowed...
-            message.body(f'Welcome to {userAccount["name"]}, {sentFrom}. Our max capacity is {userAccount["maxCapacity"]} customers.')
-
-            # and show them the options
-            message.body(f'Type JOIN to join the queue. We will notify you when there is free space.')
-            message.body(f'Type CHECK to check your position in the line.')
-            message.body(f'Type LEAVE if you want to leave the queue.')
-
-            haveResponded = True
-
-        if 'JOIN' in incomingMessage:
-            # if there is enough space in the store...
-            if currentStatus["customers"] < userAccount["maxCapacity"] and len(currentStatus["queue"]) == 0:
-                # let the customer in
-                message.body('There is enough space to enter our store. Please come inside!')
-                currentStatus["customers"] += 1
-
-            # otherwise...
-            else:
-                # let them know there's not enough space
-                message.body(f'Not enough space right now. Currently {currentStatus["customers"]} in the store. There are {len(currentStatus["queue"])} customers waiting.')
-                    
-                # if they're not in the queue...
-                if sentFrom not in currentStatus["queue"]:
-                    # add them to the queue
-                    currentStatus["queue"].append(sentFrom)
-
-                    message.body(f'We added you to the queue {sentFrom}! You are currently #{currentStatus["queue"].index(sentFrom) + 1} in line.')
-                    message.body('We will notify you when it is your turn.')
-
-                # if the user is in the queue, let them know what position they are at
-                else:
-                    message.body(f'You are already in the queue. You are currently #{currentStatus["queue"].index(sentFrom) + 1} in line.')
-
-            haveResponded = True
-
-        if 'CHECK' in incomingMessage:
-            # if the user is in the queue, let them know what position they are at
-            if sentFrom in currentStatus["queue"]:
-                message.body(f'Hello, {sentFrom}. You are currently #{currentStatus["queue"].index(sentFrom) + 1} in line.')
-
-            # otherwise...
-            else:
-                # tell them to join the queue
-                message.body(f'You are currently not in the queue. Type JOIN to get started.')
-
-            haveResponded = True
-
-        if 'LEAVE' in incomingMessage:
-            # if the user is in the queue...
-            if sentFrom in currentStatus["queue"]:
-                # remove them
-                currentStatus["queue"].remove(sentFrom)
-                message.body(f'Hello, {sentFrom}. You are no longer in the queue.')
-
-            else:
-                message.body(f'Hmmm... I could not find you in the queue. If you want to join the queue, type JOIN.')
-
-            haveResponded = True
-
-        # if no command is found...
-        if haveResponded == False:
-            # tell the user to try again
-            message.body('Sorry, I do not know how to help with that. Type HELLO to see available options.')
-
-    else:
-        message.body('Sorry, our store is not currently using the Virtual Queuing System. Please enter the store for more details or call us.')
-
-    return str(response)
