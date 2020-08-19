@@ -1,16 +1,21 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms import StringField, PasswordField, SubmitField, IntegerField
+from wtforms.validators import DataRequired, NumberRange
 
 class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    rememberMe = BooleanField('Remember Me')
+    uName = StringField('Username', validators=[DataRequired()])
+    uPassword = PasswordField('Password', validators=[DataRequired()])
     
-    submit = SubmitField('Sign In')
+    submitNow = SubmitField('Login')
 
 class RegisterForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
+    uName = StringField('Username', validators=[DataRequired()])
+    uPassword = PasswordField('Password', validators=[DataRequired()])
 
-    submit = SubmitField('Register')
+    submitNow = SubmitField('Sign Up')
+
+class CreateRoomForm(FlaskForm):
+    rMax = IntegerField('Max Capacity', validators=[DataRequired()])
+    rCustomers = IntegerField('Current Customers', validators=[DataRequired(), NumberRange(0, 50)])
+
+    createRoom = SubmitField('Create Room')

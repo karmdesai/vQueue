@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Current Customers: {{ rCustomers }}</h1>
+    <h1>Queue</h1>
+    {% for eachQueuer in rQueue %}
+        <div><p>{{ eachQueuer.phoneNo }}</b></p></div>
+    {% endfor %}
+{% endblock %}
