@@ -11,11 +11,12 @@ class LoginForm(FlaskForm):
 class RegisterForm(FlaskForm):
     uName = StringField('Username', validators=[DataRequired()])
     uPassword = PasswordField('Password', validators=[DataRequired()])
+    uPhone = StringField('Your Phone Number', validators=[DataRequired()])
 
     submitNow = SubmitField('Sign Up')
 
 class CreateRoomForm(FlaskForm):
-    rMax = IntegerField('Max Capacity', validators=[DataRequired()])
-    rCustomers = IntegerField('Current Customers', validators=[DataRequired(), NumberRange(0, 50)])
+    rMax = IntegerField('Max Capacity', validators=[DataRequired(), NumberRange(min=1)])
+    rCustomers = IntegerField('Current Customers', validators=[DataRequired(), NumberRange(1, 50)])
 
     createRoom = SubmitField('Create Room')

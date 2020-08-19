@@ -1,7 +1,8 @@
-from flask import render_template, redirect, url_for, session
+from flask import render_template, redirect, url_for, session, request
 from app import app
 from app import mongo
 from app.forms import LoginForm, RegisterForm, CreateRoomForm
+from twilio.twiml.messaging_response import MessagingResponse
 import bcrypt
 import dns
 
@@ -9,7 +10,7 @@ import dns
 @app.route('/index')
 def index():
     if 'uName' in session:
-        user = {'uName': session['username']}
+        user = {'uName': session['uName']}
     else:
         user = {'uName': 'Not Logged In'}
 
@@ -24,11 +25,18 @@ def create():
         currentUser = users.find_one({'uName': session['uName']})
 
         if form.validate_on_submit():
-            currentUser['rMax'] = form.rMax.data
-            currentUser['rCustomers'] = form.rCustomers.data
-            currentUser['rQueue'] = [{
-                "phoneNo": +14165401552
-            }]
+            users.update(
+                {
+                    '_id': currentUser['_id']
+                },
+                {
+                    '$set': {
+                        'rMax': form.rMax.data,
+                        'rCustomers': form.rCustomers.data,
+                        'rQueue': []
+                    }
+                }, upsert=False
+            )
 
             session['activeRoom'] = True
 
@@ -91,6 +99,7 @@ def register():
                 {
                     'uName': form.uName.data, 
                     'uPassword': hashedPass, 
+                    'uPhone': form.uPhone.data,
                     'rMax': 0,
                     'rCustomers': 0,
                     'rQueue': []
@@ -104,3 +113,41 @@ def register():
         return 'That Username Already Exists!'
 
     return render_template('register.html', title='Register', form=form)
+
+@app.route('/chat', methods=['GET', 'POST'])
+def chat():
+    # get the incoming message
+    sentFrom = request.values.get('From', None)
+    sentTo = request.values.get('To', None)
+    incomingMessage = request.values.get('Body', None).upper()
+
+    # handling the message
+    response = MessagingResponse()
+    message = response.message()
+    haveResponded = False
+
+    users = mongo.db.users
+
+    chosenBusiness = users.find_one({'uPhone': sentTo})
+
+    if 'JOIN' in incomingMessage:
+
+        if chosenBusiness['rMax'] != 0:
+            users.update(
+                {'_id': chosenBusiness['_id']},
+                {
+                    '$push': {
+                        'rQueue': {
+                            'phoneNo': sentFrom
+                        }
+                    },
+                    '$set': {
+                        'rCustomers': chosenBusiness['rCustomers'] + 1
+                    }                    
+                }, upsert=False)
+            message.body("I've added you to the queue.")
+
+        else:
+            message.body("We are currently not using the VQS. JSON: {}".format(chosenBusiness))
+
+    return str(response)
