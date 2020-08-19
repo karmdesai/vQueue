@@ -13,6 +13,18 @@
         <div><p><strong>Name: </strong>{{ eachQueuer.cID }}, <strong>Group Size: </strong> {{ eachQueuer.groupSize }}</b></p></div>
     {% endfor %}
     <form action="" method="post" novalidate>
+        {{ manualRemoveForm.hidden_tag() }}
+        <p>
+            {{ manualRemoveForm.userID.label }}<br>
+            {{ manualRemoveForm.userID(size=32) }}
+            {% for error in manualRemoveForm.userID.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        {{ manualRemoveForm.removeUser() }}
+    </form>
+    <form action="" method="post" novalidate>
         {{ manualForm.hidden_tag() }}
         <p>
             {{ manualForm.cID.label }}<br>

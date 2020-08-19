@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, IntegerField
+from wtforms import StringField, PasswordField, SubmitField, IntegerField, SelectField
 from wtforms.validators import DataRequired, NumberRange
 
 class LoginForm(FlaskForm):
@@ -33,3 +33,7 @@ class manualAddForm(FlaskForm):
     groupSize = IntegerField("# of People", validators=[DataRequired(), NumberRange(1, 50)])
 
     submitName = SubmitField('Add User')
+
+class manualRemoveForm(FlaskForm):
+    userID = SelectField('Choose A User To Remove', choices=[], validators=[DataRequired()])
+    removeUser = SubmitField('Remove User')

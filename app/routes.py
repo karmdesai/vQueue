@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, session, request
 from app import app
 from app import mongo, client
-from app.forms import LoginForm, RegisterForm, CreateRoomForm, manualAddForm, subtractRemoveForm
+from app.forms import LoginForm, RegisterForm, CreateRoomForm, manualAddForm, subtractRemoveForm, manualRemoveForm
 from twilio.twiml.messaging_response import MessagingResponse
 import bcrypt
 import dns
@@ -55,11 +55,16 @@ def queue():
     users = mongo.db.users
     manualForm = manualAddForm()
     subtractForm = subtractRemoveForm()
+    manualFormRemove = manualRemoveForm()
 
     if 'uName' in session:
         if 'activeRoom' in session:
             if session['activeRoom'] == True:
                 currentUser = users.find_one({'uName': session['uName']})
+
+                for eachID in findAllNumbers(currentUser['rQueue']):
+                    print(eachID)
+                    manualFormRemove.userID.choices += eachID
 
                 if manualForm.validate_on_submit():
                     users.update(
@@ -67,8 +72,8 @@ def queue():
                         {
                             '$push': {
                                 'rQueue': {
-                                    'cID': form.cID.data,
-                                    'groupSize': form.groupSize.data
+                                    'cID': manualForm.cID.data,
+                                    'groupSize': manualForm.groupSize.data
                                 }
                             }
                         }, upsert=False
@@ -76,23 +81,52 @@ def queue():
 
                     return redirect(url_for('queue'))
 
-                if subtractForm.validate_on_submit():
+                if manualFormRemove.validate_on_submit():
                     users.update(
                         {'_id': currentUser['_id']},
                         {
-                            '$set': {
-                                'rCustomers': currentUser['rCustomers'] - 1
-                            }
+                            '$pull': {
+                                'rQueue': {
+                                    'cID': manualFormRemove.userID.data
+                                }
+                            }   
                         }, upsert=False
                     )
 
-                    nextUser = currentUser['rQueue'][0]
+                if subtractForm.validate_on_submit():
+                    if currentUser['rCustomers'] > 0:
+                        users.update(
+                            {'_id': currentUser['_id']},
+                            {
+                                '$set': {
+                                    'rCustomers': currentUser['rCustomers'] - 1
+                                }
+                            }, upsert=False
+                        )
 
-                    if (currentUser['rMax'] - currentUser['rCustomers']) >= nextUser['groupSize']:
-                        if isPhoneNumber(nextUser['cID']):
-                            sendMessage(currentUser['uPhone'], nextUser['cID'], 'You can come inside now! Please do.')
-                        else:
-                            pass
+                    if len(currentUser['rQueue']) > 0:
+                        nextUser = currentUser['rQueue'][0]
+
+                        if (currentUser['rMax'] - currentUser['rCustomers']) >= nextUser['groupSize']:
+                            if isPhoneNumber(nextUser['cID']):
+                                sendMessage(currentUser['uPhone'], nextUser['cID'], 'You can come inside now! Please do.')
+
+                                users.update(
+                                    {'_id': currentUser['_id']},
+                                    {
+                                        '$set': {
+                                            'rCustomers': currentUser['rCustomers'] + nextUser['groupSize']
+                                        },
+                                        '$pull': {
+                                            'rQueue': {
+                                                'cID': nextUser['cID']
+                                            }
+                                        }       
+                                    }, upsert=False
+                                )
+                                
+                            else:
+                                pass
                              
                     return redirect(url_for('queue'))
 
@@ -104,7 +138,7 @@ def queue():
         return redirect(url_for('login'))
 
     return render_template('queue.html', title='Queue', rCustomers=currentUser['rCustomers'], 
-    rQueue=currentUser['rQueue'], manualForm=manualForm, subtractForm=subtractForm)
+    rQueue=currentUser['rQueue'], manualForm=manualForm, subtractForm=subtractForm, manualRemoveForm=manualFormRemove)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -190,31 +224,36 @@ def chat():
         if 'triedJoining' in session:
             if isInt(incomingMessage):
                 if int(incomingMessage) <= 6:
-                    if (chosenBusiness['rMax'] - chosenBusiness['rCustomers']) >= int(incomingMessage):
-                        message.body('There is enough space inside the store. Just come inside.')
+                    if sentFrom not in findAllNumbers(chosenBusiness['rQueue']):
 
-                        users.update(
-                        {'_id': chosenBusiness['_id']},
-                        {
-                            '$set': {
-                                'rCustomers': chosenBusiness['rCustomers'] + int(incomingMessage)
-                            }             
-                        }, upsert=False)
+                        if (chosenBusiness['rMax'] - chosenBusiness['rCustomers']) >= int(incomingMessage):
+                            message.body('There is enough space inside the store. Just come inside.')
 
+                            users.update(
+                            {'_id': chosenBusiness['_id']},
+                            {
+                                '$set': {
+                                    'rCustomers': chosenBusiness['rCustomers'] + int(incomingMessage)
+                                }             
+                            }, upsert=False)
+
+
+                        else:
+                            users.update(
+                            {'_id': chosenBusiness['_id']},
+                            {
+                                '$push': {
+                                    'rQueue': {
+                                        'cID': sentFrom,
+                                        'groupSize': int(incomingMessage)
+                                    }
+                                }             
+                            }, upsert=False)
+
+                            message.body('I added you to the queue!')
 
                     else:
-                        users.update(
-                        {'_id': chosenBusiness['_id']},
-                        {
-                            '$push': {
-                                'rQueue': {
-                                    'cID': sentFrom,
-                                    'groupSize': int(incomingMessage)
-                                }
-                            }             
-                        }, upsert=False)
-
-                        message.body('I added you to the queue!')
+                        message.body('You are already in the queue. You cannot join again!')
 
                     session['triedJoining'] = False
 
@@ -241,3 +280,11 @@ def isPhoneNumber(x):
         return True
 
     return False
+
+def findAllNumbers(listWithDicts):
+    finalList = []
+
+    for eachDict in listWithDicts:
+        finalList.append(eachDict['cID'])
+
+    return finalList
