@@ -1,94 +1,59 @@
-import requests
+from flask import render_template, redirect, url_for, session
 from app import app
-from flask import render_template, request, url_for, redirect, session
-from twilio.rest import Client
-from twilio.twiml.messaging_response import MessagingResponse
-from random import randint
+from app import mongo
+from app.forms import LoginForm, RegisterForm
+import bcrypt
+import dns
 
-# add a secret key to use sessions
-app.config['SECRET_KEY'] = 'changeLater'
-
-# get user input for starting variables
-@app.route('/start')
-def start():
-    return render_template('start.html', title='Get Started')
-
-# initialize a session using given variables
-@app.route('/boot', methods=['POST'])
-def boot():
-    # if form has been filled out...
-    if request.method == 'POST':
-        # store the variables...
-        session['businessName'] = request.form['getName']
-        session['phoneNumber'] = request.form['getNumber']
-        session['maxCapacity'] = int(request.form['maxCapacity'])
-        session['currentCustomers'] = int(request.form['currentCustomers'])
-        session['currentQueue'] = []
-
-        # and redirect the user to dashboard.
-        return redirect(url_for('dashboard'))
-
-    # otherwise...
-    else:
-        # redirect the user to the start page
-        return redirect(url_for('start'))
-
-# session dashboard page
 @app.route('/')
-@app.route('/dashboard', methods=['GET', 'POST'])
-def dashboard():
-    # if the user has initialized variables...
-    if session.get('maxCapacity') != None:
-        # return the dashboard page with updated content
-        return render_template('dashboard.html', name=session.get('businessName'), 
-            number=session.get('phoneNumber'), maxCapacity=session.get('maxCapacity'), 
-            curCustomers=session.get('currentCustomers'), curQueue=session.get('currentQueue'))
-
-    # otherwise...
+@app.route('/index')
+def index():
+    if 'username' in session:
+        user = {'username': session['username']}
     else:
-        # redirect the user to the start page
-        return redirect(url_for('start'))
+        user = {'username': 'Not Logged In'}
+    return render_template('index.html', title='Home', user=user)
 
-@app.route('/subtract', methods=['POST'])
-def subtract():
-    # assume a customer has left the store
-    session['currentCustomers'] -= 1
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    users = mongo.db.users
 
-    return redirect(url_for('dashboard'))
+    if form.validate_on_submit():
+        loginUser = users.find_one({'username': form.username.data})
 
-@app.route('/remove', methods=['POST'])
-def remove():
-    # look through the queue...
-    for position, eachQueuer in enumerate(session.get('currentQueue')):
-        # find the requested user's position...
-        if eachQueuer['groupName'] == request.form['removeButton']:
-            # and remove them.
-            session['currentQueue'].pop(position)
-            session.modified = True
+        if loginUser:
+            if bcrypt.hashpw((form.password.data).encode('utf-8'), loginUser['password']) == loginUser['password']:
+                session['username'] = form.username.data
 
-    return redirect(url_for('dashboard'))
-            
-@app.route('/add', methods=['POST'])
-def add():
-    # get the customers information...
-    manualCustomer = {
-        'groupName': request.form['addCustomer'],
-        'numPeople': request.form['numPeople']
-    }
+                return redirect(url_for('index'))
 
-    # and manually add the customer to the queue.
-    session['currentQueue'].append(manualCustomer)
-    session.modified = True
+        return 'Invalid Password/Email Combination'
 
-    return redirect(url_for('dashboard'))
+    return render_template('login.html', title='Login', form=form)
 
-@app.route('/text', methods=['POST'])
-def text():
-    # get the incoming message
-    sentFrom = request.values.get('From', None)
-    incomingMessage = request.values.get('Body', None).upper()
+@app.route('/register', methods=['POST', 'GET'])
+def register():
+    form = RegisterForm()
+    users = mongo.db.users
 
-    # handling the message
-    response = MessagingResponse()
-    message = response.message()
-    haveResponded = False
+    if form.validate_on_submit():
+        existingUser = users.find_one({'username' : form.username.data})
+
+        if existingUser is None:
+            hashedPass = bcrypt.hashpw(form.password.data.encode('utf-8'), bcrypt.gensalt())
+
+            users.insert(
+                {
+                    'username': form.username.data, 
+                    'password' : hashedPass, 
+                    'queue': []
+                }
+            )
+            session['username'] = form.username.data
+
+            return redirect(url_for('index'))
+        
+        return 'That Username Already Exists!'
+
+    return render_template('register.html', title='Register', form=form)
