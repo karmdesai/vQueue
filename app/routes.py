@@ -1,10 +1,13 @@
 from flask import render_template, redirect, url_for, session, request
 from app import app
-from app import mongo
+from app import mongo, client
 from app.forms import LoginForm, RegisterForm, CreateRoomForm, manualAddForm, subtractRemoveForm
 from twilio.twiml.messaging_response import MessagingResponse
 import bcrypt
 import dns
+
+def sendMessage(fromNumber, toNumber, message):
+    message = client.messages.create(body=message, from_=fromNumber,to=toNumber)
 
 @app.route('/')
 @app.route('/index')
@@ -83,6 +86,14 @@ def queue():
                         }, upsert=False
                     )
 
+                    nextUser = currentUser['rQueue'][0]
+
+                    if (currentUser['rMax'] - currentUser['rCustomers']) >= nextUser['groupSize']:
+                        if isPhoneNumber(nextUser['cID']):
+                            sendMessage(currentUser['uPhone'], nextUser['cID'], 'You can come inside now! Please do.')
+                        else:
+                            pass
+                             
                     return redirect(url_for('queue'))
 
             else:
@@ -167,7 +178,6 @@ def chat():
 
     if 'JOIN' in incomingMessage:
         if currentlyActive:
-
             message.body("Before I add you to the queue, please respond with the number of people in your group.")
             message.body("If you are here by yourself, just respond with 1.")
 
@@ -180,19 +190,33 @@ def chat():
         if 'triedJoining' in session:
             if isInt(incomingMessage):
                 if int(incomingMessage) <= 6:
-                    users.update(
-                    {'_id': chosenBusiness['_id']},
-                    {
-                        '$push': {
-                            'rQueue': {
-                                'cID': sentFrom,
-                                'groupSize': int(incomingMessage)
-                            }
-                        }             
-                    }, upsert=False)
+                    if (chosenBusiness['rMax'] - chosenBusiness['rCustomers']) >= int(incomingMessage):
+                        message.body('There is enough space inside the store. Just come inside.')
+
+                        users.update(
+                        {'_id': chosenBusiness['_id']},
+                        {
+                            '$set': {
+                                'rCustomers': chosenBusiness['rCustomers'] + int(incomingMessage)
+                            }             
+                        }, upsert=False)
+
+
+                    else:
+                        users.update(
+                        {'_id': chosenBusiness['_id']},
+                        {
+                            '$push': {
+                                'rQueue': {
+                                    'cID': sentFrom,
+                                    'groupSize': int(incomingMessage)
+                                }
+                            }             
+                        }, upsert=False)
+
+                        message.body('I added you to the queue!')
 
                     session['triedJoining'] = False
-                    message.body('I added you to the queue!')
 
                 else:
                     message.body('Only 6 people can join the queue with one number.')
@@ -211,3 +235,9 @@ def isInt(x):
 
     except ValueError:
         return False
+
+def isPhoneNumber(x):
+    if isInt(x[1:-1]):
+        return True
+
+    return False
