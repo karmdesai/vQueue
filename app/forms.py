@@ -11,6 +11,7 @@ class LoginForm(FlaskForm):
 class RegisterForm(FlaskForm):
     uName = StringField('Username', validators=[DataRequired()])
     uPassword = PasswordField('Password', validators=[DataRequired()])
+    bName = StringField("Your Business's Name (Customers Will See This)", validators=[DataRequired()])
     uPhone = StringField('Your Phone Number', validators=[DataRequired()])
 
     submitNow = SubmitField('Sign Up')
@@ -23,3 +24,12 @@ class CreateRoomForm(FlaskForm):
 
 class endSessionForm(FlaskForm):
     endSession = SubmitField('End Session')
+
+class subtractRemoveForm(FlaskForm):
+    subtractCustomer = SubmitField('-')
+
+class manualAddForm(FlaskForm):
+    cID = StringField("Person's Name", validators=[DataRequired()])
+    groupSize = IntegerField("# of People", validators=[DataRequired(), NumberRange(1, 50)])
+
+    submitName = SubmitField('Add User')

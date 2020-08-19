@@ -1,13 +1,33 @@
 {% extends "base.html" %}
 
 {% block content %}
+    <div>
     <h1>Current Customers: {{ rCustomers }}</h1>
+    <form action="" method="post" novalidate>
+        {{ subtractForm.hidden_tag() }}
+        {{ subtractForm.subtractCustomer() }}
+    </form>
+    </div>
     <h1>Queue</h1>
     {% for eachQueuer in rQueue %}
-        <div><p>{{ eachQueuer.phoneNo }}</b></p></div>
+        <div><p><strong>Name: </strong>{{ eachQueuer.cID }}, <strong>Group Size: </strong> {{ eachQueuer.groupSize }}</b></p></div>
     {% endfor %}
     <form action="" method="post" novalidate>
-        {{ form.hidden_tag() }}
-        <p>{{ form.endSession() }}</p>
+        {{ manualForm.hidden_tag() }}
+        <p>
+            {{ manualForm.cID.label }}<br>
+            {{ manualForm.cID }}
+            {% for error in manualForm.cID.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ manualForm.groupSize.label }}<br>
+            {{ manualForm.groupSize }}
+            {% for error in manualForm.groupSize.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>{{ manualForm.submitName() }}</p>
     </form>
 {% endblock %}

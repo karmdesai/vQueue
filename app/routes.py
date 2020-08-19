@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, session, request
 from app import app
 from app import mongo
-from app.forms import LoginForm, RegisterForm, CreateRoomForm, endSessionForm
+from app.forms import LoginForm, RegisterForm, CreateRoomForm, manualAddForm, subtractRemoveForm
 from twilio.twiml.messaging_response import MessagingResponse
 import bcrypt
 import dns
@@ -50,30 +50,40 @@ def create():
 @app.route('/queue', methods=['GET', 'POST'])
 def queue():
     users = mongo.db.users
-    form = endSessionForm()
+    manualForm = manualAddForm()
+    subtractForm = subtractRemoveForm()
 
     if 'uName' in session:
         if 'activeRoom' in session:
             if session['activeRoom'] == True:
                 currentUser = users.find_one({'uName': session['uName']})
 
-                if form.validate_on_submit():
+                if manualForm.validate_on_submit():
                     users.update(
+                        {'_id': currentUser['_id']},
                         {
-                            '_id': currentUser['_id']
-                        },
-                        {
-                            '$set': {
-                                'rMax': 0,
-                                'rCustomers': 0,
-                                'rQueue': []
+                            '$push': {
+                                'rQueue': {
+                                    'cID': form.cID.data,
+                                    'groupSize': form.groupSize.data
+                                }
                             }
                         }, upsert=False
                     )
 
-                    session['activeRoom'] = False
+                    return redirect(url_for('queue'))
 
-                    return redirect(url_for('create'))
+                if subtractForm.validate_on_submit():
+                    users.update(
+                        {'_id': currentUser['_id']},
+                        {
+                            '$set': {
+                                'rCustomers': currentUser['rCustomers'] - 1
+                            }
+                        }, upsert=False
+                    )
+
+                    return redirect(url_for('queue'))
 
             else:
                 return redirect(url_for('create'))
@@ -82,7 +92,8 @@ def queue():
     else:
         return redirect(url_for('login'))
 
-    return render_template('queue.html', title='Queue', rCustomers=currentUser['rCustomers'], rQueue=currentUser['rQueue'], form=form)
+    return render_template('queue.html', title='Queue', rCustomers=currentUser['rCustomers'], 
+    rQueue=currentUser['rQueue'], manualForm=manualForm, subtractForm=subtractForm)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -118,6 +129,7 @@ def register():
                 {
                     'uName': form.uName.data, 
                     'uPassword': hashedPass, 
+                    'bName': form.bName.data,
                     'uPhone': form.uPhone.data,
                     'rMax': 0,
                     'rCustomers': 0,
@@ -146,27 +158,56 @@ def chat():
     haveResponded = False
 
     users = mongo.db.users
-
     chosenBusiness = users.find_one({'uPhone': sentTo})
 
-    if 'JOIN' in incomingMessage:
+    if chosenBusiness['rMax'] == 0:
+        currentlyActive = False
+    else:
+        currentlyActive = True
 
-        if chosenBusiness['rMax'] != 0:
-            users.update(
-                {'_id': chosenBusiness['_id']},
-                {
-                    '$push': {
-                        'rQueue': {
-                            'phoneNo': sentFrom
-                        }
-                    },
-                    '$set': {
-                        'rCustomers': chosenBusiness['rCustomers'] + 1
-                    }                    
-                }, upsert=False)
-            message.body("I've added you to the queue.")
+    if 'JOIN' in incomingMessage:
+        if currentlyActive:
+
+            message.body("Before I add you to the queue, please respond with the number of people in your group.")
+            message.body("If you are here by yourself, just respond with 1.")
+
+            session['triedJoining'] = True
 
         else:
             message.body("We are currently not using the VQS. JSON: {}".format(chosenBusiness))
 
+    else:
+        if 'triedJoining' in session:
+            if isInt(incomingMessage):
+                if int(incomingMessage) <= 6:
+                    users.update(
+                    {'_id': chosenBusiness['_id']},
+                    {
+                        '$push': {
+                            'rQueue': {
+                                'cID': sentFrom,
+                                'groupSize': int(incomingMessage)
+                            }
+                        }             
+                    }, upsert=False)
+
+                    session['triedJoining'] = False
+                    message.body('I added you to the queue!')
+
+                else:
+                    message.body('Only 6 people can join the queue with one number.')
+                    message.body('Please try again with a smaller number of people')
+            else:
+                message.body('Please enter only a number.')
+        else:
+            message.body('I cannot help with that.')
+
     return str(response)
+
+def isInt(x):
+    try: 
+        int(x)
+        return True
+
+    except ValueError:
+        return False
