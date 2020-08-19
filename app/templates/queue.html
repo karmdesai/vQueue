@@ -6,4 +6,8 @@
     {% for eachQueuer in rQueue %}
         <div><p>{{ eachQueuer.phoneNo }}</b></p></div>
     {% endfor %}
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>{{ form.endSession() }}</p>
+    </form>
 {% endblock %}

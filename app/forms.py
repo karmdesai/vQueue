@@ -20,3 +20,6 @@ class CreateRoomForm(FlaskForm):
     rCustomers = IntegerField('Current Customers', validators=[DataRequired(), NumberRange(1, 50)])
 
     createRoom = SubmitField('Create Room')
+
+class endSessionForm(FlaskForm):
+    endSession = SubmitField('End Session')

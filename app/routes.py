@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, session, request
 from app import app
 from app import mongo
-from app.forms import LoginForm, RegisterForm, CreateRoomForm
+from app.forms import LoginForm, RegisterForm, CreateRoomForm, endSessionForm
 from twilio.twiml.messaging_response import MessagingResponse
 import bcrypt
 import dns
@@ -50,11 +50,30 @@ def create():
 @app.route('/queue', methods=['GET', 'POST'])
 def queue():
     users = mongo.db.users
+    form = endSessionForm()
 
     if 'uName' in session:
         if 'activeRoom' in session:
             if session['activeRoom'] == True:
                 currentUser = users.find_one({'uName': session['uName']})
+
+                if form.validate_on_submit():
+                    users.update(
+                        {
+                            '_id': currentUser['_id']
+                        },
+                        {
+                            '$set': {
+                                'rMax': 0,
+                                'rCustomers': 0,
+                                'rQueue': []
+                            }
+                        }, upsert=False
+                    )
+
+                    session['activeRoom'] = False
+
+                    return redirect(url_for('create'))
 
             else:
                 return redirect(url_for('create'))
@@ -63,7 +82,7 @@ def queue():
     else:
         return redirect(url_for('login'))
 
-    return render_template('queue.html', title='Queue', rCustomers=currentUser['rCustomers'], rQueue=currentUser['rQueue'])
+    return render_template('queue.html', title='Queue', rCustomers=currentUser['rCustomers'], rQueue=currentUser['rQueue'], form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
