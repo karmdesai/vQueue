@@ -19,6 +19,6 @@ def findAllValues(dictsInList, keyName):
     finalValues = []
 
     for eachDict in dictsInList:
-        finalList.append(eachDict[keyName])
+        finalValues.append(eachDict[keyName])
 
     return finalValues

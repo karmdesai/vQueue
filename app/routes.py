@@ -6,12 +6,11 @@ from app import mongo
 from app import client
 
 from app.relations import changeAllR, changeRCustomers, addToQ, removeFromQ
-from app.forms import (LoginForm, RegisterForm, CreateRoomForm, 
-    SubtractCustomerForm, ManualAddForm)
+from app.forms import (LoginForm, RegisterForm, CreateRoomForm, ManualAddForm)
 from app.helper import sendMessage, isInt, isPhoneNumber, findAllValues
 
 from twilio.twiml.messaging_response import MessagingResponse
-from flask import render_template, redirect, url_for, session, request
+from flask import render_template, redirect, url_for, session, request, flash
 
 @app.route('/')
 @app.route('/index')
@@ -22,6 +21,58 @@ def index():
         user = {'uName': 'Not Logged In'}
 
     return render_template('index.html', title='Home', user=user)
+
+@app.route('/subtract')
+def subtract():
+    users = mongo.db.users
+
+    if session['activeRoom'] == True:
+        currentUser = users.find_one({'uName': session['uName']})
+
+        if currentUser['rCustomers'] > 0:
+            changeRCustomers(document=users, ID=currentUser['_id'],
+                rCustomers=currentUser['rCustomers'] - 1)
+
+        if len(currentUser['rQueue']) > 0:
+            nextCustomer = currentUser['rQueue'][0]
+
+            if (currentUser['rMax'] - currentUser['rCustomers']) >= nextCustomer['groupSize']:
+                if isPhoneNumber(nextCustomer['cID']):
+                    sendMessage(client, currentUser['uPhone'], 
+                    nextCustomer['cID'], 'You can come inside now! Please do.')
+                                    
+                else:
+                    flash("""There was enough space to call {} into the store. They are a group of {}.
+                    I have removed them from the queue. Please remember to call them 
+                    inside.""".format(nextCustomer['cID'], nextCustomer['groupSize']))
+
+                changeRCustomers(document=users, ID=currentUser['_id'],
+                    rCustomers=currentUser['rCustomers'] + nextCustomer['groupSize'])
+
+                removeFromQ(document=users, ID=currentUser['_id'],
+                    cID=nextCustomer['cID'])
+
+                             
+        return redirect(url_for('queue'))
+
+    else:
+        return redirect(url_for('create'))
+
+
+@app.route('/remove/<cID>')
+def remove(cID):
+    users = mongo.db.users
+
+    if session['activeRoom'] == True:
+        currentUser = users.find_one({'uName': session['uName']})
+
+        removeFromQ(document=users, ID=currentUser['_id'],
+                    cID=cID)
+
+        return redirect(url_for('queue'))
+
+    else:
+        return redirect(url_for('create'))
 
 @app.route('/create', methods=['GET', 'POST'])
 def create():
@@ -47,54 +98,34 @@ def create():
 @app.route('/queue', methods=['GET', 'POST'])
 def queue():
     users = mongo.db.users
-    manualForm = ManualAddForm()
-    subtractForm = SubtractCustomerForm()
+    form = ManualAddForm()
 
-    if 'uName' in session:
-        if 'activeRoom' in session:
-            if session['activeRoom'] == True:
-                currentUser = users.find_one({'uName': session['uName']})
+    if 'activeRoom' in session:
+        if session['activeRoom'] == True:
+            currentUser = users.find_one({'uName': session['uName']})
 
-                if manualForm.validate_on_submit():
-                    addToQ(document=users, ID=currentUser['_id'], 
-                        cID=manualForm.cID.data, groupSize=manualForm.groupSize.data)
+            if form.validate_on_submit():
+                if (currentUser['rMax'] - currentUser['rCustomers']) >= form.groupSize.data:
+                    flash("""There is enough space for '{}' to be inside. Please call them.""".format(form.cID.data))
 
-                    return redirect(url_for('queue'))
+                else:
+                    if form.cID.data not in findAllValues(currentUser['rQueue'], 'cID'):
+                        addToQ(document=users, ID=currentUser['_id'], 
+                            cID=form.cID.data, groupSize=form.groupSize.data)    
 
-                    return redirect(url_for('queue'))
+                    else:
+                        flash("""The name '{}' is already taken. Please choose a different 
+                        name.""".format(form.cID.data))
 
-                if subtractForm.validate_on_submit():
-                    if currentUser['rCustomers'] > 0:
-                        changeRCustomers(document=users, ID=currentUser['_id'],
-                            rCustomers=currentUser['rCustomers'] - 1)
+                return redirect(url_for('queue'))
 
-                    if len(currentUser['rQueue']) > 0:
-                        nextCustomer = currentUser['rQueue'][0]
-
-                        if (currentUser['rMax'] - currentUser['rCustomers']) >= nextCustomer['groupSize']:
-                            if isPhoneNumber(nextUser['cID']):
-                                sendMessage(client, currentUser['uPhone'], nextCustomer['cID'], 'You can come inside now! Please do.')
-
-                                changeRCustomers(document=users, ID=currentUser['_id'],
-                                    rCustomers=currentUser['rCustomers'] + nextCustomer['groupSize'])
-
-                                removeFromQ(document=users, ID=currentUser['_id'],
-                                    cID=nextCustomer['cID'])
-                                
-                            else:
-                                pass
-                             
-                    return redirect(url_for('queue'))
-
-            else:
-                return redirect(url_for('create'))
         else:
             return redirect(url_for('create'))
     else:
-        return redirect(url_for('login'))
+        return redirect(url_for('create'))
 
     return render_template('queue.html', title='Queue', rCustomers=currentUser['rCustomers'], 
-    rQueue=currentUser['rQueue'], manualForm=manualForm, subtractForm=subtractForm)
+    rQueue=currentUser['rQueue'], form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -111,7 +142,8 @@ def login():
 
                 return redirect(url_for('create'))
 
-        return 'Invalid Password/Email Combination'
+        flash("Invalid Email/Password combination. Try again.")
+        return redirect(url_for('login'))
 
     return render_template('login.html', title='Login', form=form)
 
@@ -142,7 +174,8 @@ def register():
 
             return redirect(url_for('create'))
         
-        return 'That Username Already Exists!'
+        flash("That username already exists. Use another username or login instead.")
+        return redirect(url_for('register'))
 
     return render_template('register.html', title='Register', form=form)
 

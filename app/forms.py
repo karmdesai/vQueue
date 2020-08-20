@@ -22,14 +22,8 @@ class CreateRoomForm(FlaskForm):
 
     submitNow = SubmitField('Create Room')
 
-class EndSessionForm(FlaskForm):
-    submitNow = SubmitField('End Session')
-
-class SubtractCustomerForm(FlaskForm):
-    submitNow = SubmitField('-')
-
 class ManualAddForm(FlaskForm):
     cID = StringField("Person's Name", validators=[DataRequired()])
     groupSize = IntegerField("# of People", validators=[DataRequired(), NumberRange(1, 50)])
 
-    submitNow = SubmitField('Add User')
+    manualAdd = SubmitField('Add User')

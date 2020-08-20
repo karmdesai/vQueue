@@ -1,33 +1,44 @@
 {% extends "base.html" %}
 
 {% block content %}
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <ul class=flashes>
+        {% for message in messages %}
+        <p>{{ message }}</p>
+        {% endfor %}
+        </ul>
+    {% endif %}
+    {% endwith %}
     <div>
-    <h1>Current Customers: {{ rCustomers }}</h1>
-    <form action="" method="post" novalidate>
-        {{ subtractForm.hidden_tag() }}
-        {{ subtractForm.submitNow() }}
-    </form>
+        <h1>Current Customers: {{ rCustomers }}</h1>
+        <a href="{{ url_for('subtract') }}">A Customer Has Left</a>
     </div>
     <h1>Queue</h1>
     {% for eachQueuer in rQueue %}
-        <div><p><strong>Name: </strong>{{ eachQueuer.cID }}, <strong>Group Size: </strong> {{ eachQueuer.groupSize }}</b></p></div>
+        <div>
+            <p>
+                <strong>Name: </strong>{{ eachQueuer.cID }}, <strong>Group Size: </strong> {{ eachQueuer.groupSize }}
+            </p>
+            <a href="{{ url_for('remove', cID=eachQueuer.cID) }}">Remove</a>
+        </div>
     {% endfor %}
     <form action="" method="post" novalidate>
-        {{ manualForm.hidden_tag() }}
+        {{ form.hidden_tag() }}
         <p>
-            {{ manualForm.cID.label }}<br>
-            {{ manualForm.cID }}
-            {% for error in manualForm.cID.errors %}
+            {{ form.cID.label }}<br>
+            {{ form.cID }}
+            {% for error in form.cID.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
-            {{ manualForm.groupSize.label }}<br>
-            {{ manualForm.groupSize }}
-            {% for error in manualForm.groupSize.errors %}
+            {{ form.groupSize.label }}<br>
+            {{ form.groupSize }}
+            {% for error in form.groupSize.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
-        <p>{{ manualForm.submitNow() }}</p>
+        <p>{{ form.manualAdd() }}</p>
     </form>
 {% endblock %}
