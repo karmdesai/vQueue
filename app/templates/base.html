@@ -18,5 +18,40 @@
         
         <hr>
         {% block content %}{% endblock %}
+        {% block script %}
+        <script src="{{ url_for('static', filename='jquery-3.3.1.min.js') }}"></script>
+        <script>
+            function update(){
+              $.ajax({
+                method: 'POST',
+                url: {{ url_for('update')|tojson }},
+                data: {'bName': '{{ bName }}'},
+                success: function(response){    
+                  $('.rCust').text(response.rCustomers);
+
+                  console.log(response.rQueue);
+
+                  if (response.rQueue.length > 0) {
+                    $('.myQ').empty();
+
+                    for (c = 0; c < response.rQueue.length; c++) {
+                      var customerID = response.rQueue[c].cID;
+                      var customerSize = response.rQueue[c].groupSize;
+
+                      $('.myQ').append('<div class="qCust">' +
+                        '<span class="cInfo">Name: <strong>' + customerID 
+                        + '</strong>, Size: <strong>' + customerSize + 
+                          '</strong></span>' + '</div>');
+                    }
+                  }
+                }
+              });
+            }
+        
+            $(document).ready(function(){
+                setInterval(update, 5000);
+            });
+        </script>
+    {% endblock %}
     </body>
 </html>

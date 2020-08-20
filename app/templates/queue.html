@@ -11,18 +11,14 @@
     {% endif %}
     {% endwith %}
     <div>
-        <h1>Current Customers: {{ rCustomers }}</h1>
+        <h1 class='title'>Current Customers: <span class='rCust'>{{ rCustomers }}</span></h1>
         <a href="{{ url_for('subtract') }}">A Customer Has Left</a>
     </div>
+    <h1>{{ bName }}</h1>
     <h1>Queue</h1>
-    {% for eachQueuer in rQueue %}
-        <div>
-            <p>
-                <strong>Name: </strong>{{ eachQueuer.cID }}, <strong>Group Size: </strong> {{ eachQueuer.groupSize }}
-            </p>
-            <a href="{{ url_for('remove', cID=eachQueuer.cID) }}">Remove</a>
-        </div>
-    {% endfor %}
+
+    <div class='myQ'></div>
+
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
         <p>

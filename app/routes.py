@@ -1,16 +1,17 @@
 import dns
 import bcrypt
+import requests
 
 from app import app
 from app import mongo
 from app import client
 
 from app.relations import changeAllR, changeRCustomers, addToQ, removeFromQ
-from app.forms import (LoginForm, RegisterForm, CreateRoomForm, ManualAddForm)
+from app.forms import LoginForm, RegisterForm, CreateRoomForm, ManualAddForm
 from app.helper import sendMessage, isInt, isPhoneNumber, findAllValues
 
 from twilio.twiml.messaging_response import MessagingResponse
-from flask import render_template, redirect, url_for, session, request, flash
+from flask import render_template, redirect, url_for, session, request, flash, jsonify
 
 @app.route('/')
 @app.route('/index')
@@ -27,18 +28,18 @@ def subtract():
     users = mongo.db.users
 
     if session['activeRoom'] == True:
-        currentUser = users.find_one({'uName': session['uName']})
+        cBusiness = users.find_one({'uName': session['uName']})
 
-        if currentUser['rCustomers'] > 0:
-            changeRCustomers(document=users, ID=currentUser['_id'],
-                rCustomers=currentUser['rCustomers'] - 1)
+        if cBusiness['rCustomers'] > 0:
+            changeRCustomers(document=users, ID=cBusiness['_id'],
+                rCustomers=cBusiness['rCustomers'] - 1)
 
-        if len(currentUser['rQueue']) > 0:
-            nextCustomer = currentUser['rQueue'][0]
+        if len(cBusiness['rQueue']) > 0:
+            nextCustomer = cBusiness['rQueue'][0]
 
-            if (currentUser['rMax'] - currentUser['rCustomers']) >= nextCustomer['groupSize']:
+            if (cBusiness['rMax'] - cBusiness['rCustomers']) >= nextCustomer['groupSize']:
                 if isPhoneNumber(nextCustomer['cID']):
-                    sendMessage(client, currentUser['uPhone'], 
+                    sendMessage(client, cBusiness['uPhone'], 
                     nextCustomer['cID'], 'You can come inside now! Please do.')
                                     
                 else:
@@ -46,10 +47,10 @@ def subtract():
                     I have removed them from the queue. Please remember to call them 
                     inside.""".format(nextCustomer['cID'], nextCustomer['groupSize']))
 
-                changeRCustomers(document=users, ID=currentUser['_id'],
-                    rCustomers=currentUser['rCustomers'] + nextCustomer['groupSize'])
+                changeRCustomers(document=users, ID=cBusiness['_id'],
+                    rCustomers=cBusiness['rCustomers'] + nextCustomer['groupSize'])
 
-                removeFromQ(document=users, ID=currentUser['_id'],
+                removeFromQ(document=users, ID=cBusiness['_id'],
                     cID=nextCustomer['cID'])
 
                              
@@ -64,9 +65,9 @@ def remove(cID):
     users = mongo.db.users
 
     if session['activeRoom'] == True:
-        currentUser = users.find_one({'uName': session['uName']})
+        cBusiness = users.find_one({'uName': session['uName']})
 
-        removeFromQ(document=users, ID=currentUser['_id'],
+        removeFromQ(document=users, ID=cBusiness['_id'],
                     cID=cID)
 
         return redirect(url_for('queue'))
@@ -80,10 +81,10 @@ def create():
     users = mongo.db.users
     
     if 'uName' in session:
-        currentUser = users.find_one({'uName': session['uName']})
+        cBusiness = users.find_one({'uName': session['uName']})
 
         if form.validate_on_submit():
-            changeAllR(document=users, ID=currentUser['_id'], rMax=form.rMax.data, 
+            changeAllR(document=users, ID=cBusiness['_id'], rMax=form.rMax.data, 
                 rCustomers=form.rCustomers.data, rQueue=[])
 
             session['activeRoom'] = True
@@ -102,15 +103,18 @@ def queue():
 
     if 'activeRoom' in session:
         if session['activeRoom'] == True:
-            currentUser = users.find_one({'uName': session['uName']})
+            cBusiness = users.find_one({'uName': session['uName']})
 
             if form.validate_on_submit():
-                if (currentUser['rMax'] - currentUser['rCustomers']) >= form.groupSize.data:
+                if (cBusiness['rMax'] - cBusiness['rCustomers']) >= form.groupSize.data:
                     flash("""There is enough space for '{}' to be inside. Please call them.""".format(form.cID.data))
 
+                    changeRCustomers(document=users, ID=cBusiness['_id'],
+                        rCustomers=cBusiness['rCustomers'] + form.groupSize.data)
+
                 else:
-                    if form.cID.data not in findAllValues(currentUser['rQueue'], 'cID'):
-                        addToQ(document=users, ID=currentUser['_id'], 
+                    if form.cID.data not in findAllValues(cBusiness['rQueue'], 'cID'):
+                        addToQ(document=users, ID=cBusiness['_id'], 
                             cID=form.cID.data, groupSize=form.groupSize.data)    
 
                     else:
@@ -124,8 +128,8 @@ def queue():
     else:
         return redirect(url_for('create'))
 
-    return render_template('queue.html', title='Queue', rCustomers=currentUser['rCustomers'], 
-    rQueue=currentUser['rQueue'], form=form)
+    return render_template('queue.html', title='Queue', bName=cBusiness['bName'], form=form, 
+        rCustomers=cBusiness['rCustomers'])
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -192,9 +196,9 @@ def chat():
     haveResponded = False
 
     users = mongo.db.users
-    chosenBusiness = users.find_one({'uPhone': sentTo})
+    cBusiness = users.find_one({'uPhone': sentTo})
 
-    if chosenBusiness['rMax'] == 0:
+    if cBusiness['rMax'] == 0:
         currentlyActive = False
     else:
         currentlyActive = True
@@ -207,24 +211,29 @@ def chat():
             session['triedJoining'] = True
 
         else:
-            message.body("We are currently not using the VQS. JSON: {}".format(chosenBusiness))
+            message.body("We are currently not using the VQS. JSON: {}".format(cBusiness))
 
     else:
         if 'triedJoining' in session:
             if isInt(incomingMessage):
                 if int(incomingMessage) <= 6:
-                    if sentFrom not in findAllValues(chosenBusiness['rQueue'], 'cID'):
+                    if sentFrom not in findAllValues(cBusiness['rQueue'], 'cID'):
 
-                        if (chosenBusiness['rMax'] - chosenBusiness['rCustomers']) >= int(incomingMessage):
+                        if (cBusiness['rMax'] - cBusiness['rCustomers']) >= int(incomingMessage):
                             message.body('There is enough space inside the store. Just come inside.')
 
-                            changeRCustomers(document=users, ID=chosenBusiness['_id'],
-                                rCustomers=chosenBusiness['rCustomers'] + int(incomingMessage))
+                            changeRCustomers(document=users, ID=cBusiness['_id'],
+                                rCustomers=cBusiness['rCustomers'] + int(incomingMessage))
 
 
                         else:
-                            addToQ(document=users, ID=chosenBusiness['_id'], 
+                            addToQ(document=users, ID=cBusiness['_id'], 
                                 cID=sentFrom, groupSize=int(incomingMessage))
+
+                            newCustomer = {
+                                'cID': sentFrom,
+                                'groupSize': int(incomingMessage)
+                            }
 
                             message.body('I added you to the queue!')
 
@@ -242,3 +251,11 @@ def chat():
             message.body('I cannot help with that.')
 
     return str(response)
+
+@app.route('/update', methods=['GET', 'POST'])
+def update():
+    users = mongo.db.users
+    bName = request.form.get('bName')
+    cBusiness = users.find_one({'bName': bName})
+
+    return jsonify(rQueue=cBusiness['rQueue'], rCustomers=cBusiness['rCustomers'])
