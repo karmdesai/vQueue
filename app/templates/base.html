@@ -21,6 +21,8 @@
         {% block script %}
         <script src="{{ url_for('static', filename='jquery-3.3.1.min.js') }}"></script>
         <script>
+            $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
             function update(){
               $.ajax({
                 method: 'POST',
@@ -41,7 +43,9 @@
                       $('.myQ').append('<div class="qCust">' +
                         '<span class="cInfo">Name: <strong>' + customerID 
                         + '</strong>, Size: <strong>' + customerSize + 
-                          '</strong></span>' + '</div>');
+                          '</strong></span>' + '<span class="removeC">'
+                          + `<a href="${$SCRIPT_ROOT}/remove/${customerID}">Remove</a></span>` +
+                          '</div>');
                     }
                   }
                 }
