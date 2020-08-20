@@ -5,25 +5,13 @@
     <h1>Current Customers: {{ rCustomers }}</h1>
     <form action="" method="post" novalidate>
         {{ subtractForm.hidden_tag() }}
-        {{ subtractForm.subtractCustomer() }}
+        {{ subtractForm.submitNow() }}
     </form>
     </div>
     <h1>Queue</h1>
     {% for eachQueuer in rQueue %}
         <div><p><strong>Name: </strong>{{ eachQueuer.cID }}, <strong>Group Size: </strong> {{ eachQueuer.groupSize }}</b></p></div>
     {% endfor %}
-    <form action="" method="post" novalidate>
-        {{ manualRemoveForm.hidden_tag() }}
-        <p>
-            {{ manualRemoveForm.userID.label }}<br>
-            {{ manualRemoveForm.userID(size=32) }}
-            {% for error in manualRemoveForm.userID.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-
-        {{ manualRemoveForm.removeUser() }}
-    </form>
     <form action="" method="post" novalidate>
         {{ manualForm.hidden_tag() }}
         <p>
@@ -40,6 +28,6 @@
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
-        <p>{{ manualForm.submitName() }}</p>
+        <p>{{ manualForm.submitNow() }}</p>
     </form>
 {% endblock %}

@@ -1,13 +1,17 @@
-from flask import render_template, redirect, url_for, session, request
-from app import app
-from app import mongo, client
-from app.forms import LoginForm, RegisterForm, CreateRoomForm, manualAddForm, subtractRemoveForm, manualRemoveForm
-from twilio.twiml.messaging_response import MessagingResponse
-import bcrypt
 import dns
+import bcrypt
 
-def sendMessage(fromNumber, toNumber, message):
-    message = client.messages.create(body=message, from_=fromNumber,to=toNumber)
+from app import app
+from app import mongo
+from app import client
+
+from app.relations import changeAllR, changeRCustomers, addToQ, removeFromQ
+from app.forms import (LoginForm, RegisterForm, CreateRoomForm, 
+    SubtractCustomerForm, ManualAddForm)
+from app.helper import sendMessage, isInt, isPhoneNumber, findAllValues
+
+from twilio.twiml.messaging_response import MessagingResponse
+from flask import render_template, redirect, url_for, session, request
 
 @app.route('/')
 @app.route('/index')
@@ -28,18 +32,8 @@ def create():
         currentUser = users.find_one({'uName': session['uName']})
 
         if form.validate_on_submit():
-            users.update(
-                {
-                    '_id': currentUser['_id']
-                },
-                {
-                    '$set': {
-                        'rMax': form.rMax.data,
-                        'rCustomers': form.rCustomers.data,
-                        'rQueue': []
-                    }
-                }, upsert=False
-            )
+            changeAllR(document=users, ID=currentUser['_id'], rMax=form.rMax.data, 
+                rCustomers=form.rCustomers.data, rQueue=[])
 
             session['activeRoom'] = True
 
@@ -53,77 +47,39 @@ def create():
 @app.route('/queue', methods=['GET', 'POST'])
 def queue():
     users = mongo.db.users
-    manualForm = manualAddForm()
-    subtractForm = subtractRemoveForm()
-    manualFormRemove = manualRemoveForm()
+    manualForm = ManualAddForm()
+    subtractForm = SubtractCustomerForm()
 
     if 'uName' in session:
         if 'activeRoom' in session:
             if session['activeRoom'] == True:
                 currentUser = users.find_one({'uName': session['uName']})
 
-                for eachID in findAllNumbers(currentUser['rQueue']):
-                    print(eachID)
-                    manualFormRemove.userID.choices += eachID
-
                 if manualForm.validate_on_submit():
-                    users.update(
-                        {'_id': currentUser['_id']},
-                        {
-                            '$push': {
-                                'rQueue': {
-                                    'cID': manualForm.cID.data,
-                                    'groupSize': manualForm.groupSize.data
-                                }
-                            }
-                        }, upsert=False
-                    )
+                    addToQ(document=users, ID=currentUser['_id'], 
+                        cID=manualForm.cID.data, groupSize=manualForm.groupSize.data)
 
                     return redirect(url_for('queue'))
 
-                if manualFormRemove.validate_on_submit():
-                    users.update(
-                        {'_id': currentUser['_id']},
-                        {
-                            '$pull': {
-                                'rQueue': {
-                                    'cID': manualFormRemove.userID.data
-                                }
-                            }   
-                        }, upsert=False
-                    )
+                    return redirect(url_for('queue'))
 
                 if subtractForm.validate_on_submit():
                     if currentUser['rCustomers'] > 0:
-                        users.update(
-                            {'_id': currentUser['_id']},
-                            {
-                                '$set': {
-                                    'rCustomers': currentUser['rCustomers'] - 1
-                                }
-                            }, upsert=False
-                        )
+                        changeRCustomers(document=users, ID=currentUser['_id'],
+                            rCustomers=currentUser['rCustomers'] - 1)
 
                     if len(currentUser['rQueue']) > 0:
-                        nextUser = currentUser['rQueue'][0]
+                        nextCustomer = currentUser['rQueue'][0]
 
-                        if (currentUser['rMax'] - currentUser['rCustomers']) >= nextUser['groupSize']:
+                        if (currentUser['rMax'] - currentUser['rCustomers']) >= nextCustomer['groupSize']:
                             if isPhoneNumber(nextUser['cID']):
-                                sendMessage(currentUser['uPhone'], nextUser['cID'], 'You can come inside now! Please do.')
+                                sendMessage(client, currentUser['uPhone'], nextCustomer['cID'], 'You can come inside now! Please do.')
 
-                                users.update(
-                                    {'_id': currentUser['_id']},
-                                    {
-                                        '$set': {
-                                            'rCustomers': currentUser['rCustomers'] + nextUser['groupSize']
-                                        },
-                                        '$pull': {
-                                            'rQueue': {
-                                                'cID': nextUser['cID']
-                                            }
-                                        }       
-                                    }, upsert=False
-                                )
+                                changeRCustomers(document=users, ID=currentUser['_id'],
+                                    rCustomers=currentUser['rCustomers'] + nextCustomer['groupSize'])
+
+                                removeFromQ(document=users, ID=currentUser['_id'],
+                                    cID=nextCustomer['cID'])
                                 
                             else:
                                 pass
@@ -138,7 +94,7 @@ def queue():
         return redirect(url_for('login'))
 
     return render_template('queue.html', title='Queue', rCustomers=currentUser['rCustomers'], 
-    rQueue=currentUser['rQueue'], manualForm=manualForm, subtractForm=subtractForm, manualRemoveForm=manualFormRemove)
+    rQueue=currentUser['rQueue'], manualForm=manualForm, subtractForm=subtractForm)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -224,31 +180,18 @@ def chat():
         if 'triedJoining' in session:
             if isInt(incomingMessage):
                 if int(incomingMessage) <= 6:
-                    if sentFrom not in findAllNumbers(chosenBusiness['rQueue']):
+                    if sentFrom not in findAllValues(chosenBusiness['rQueue'], 'cID'):
 
                         if (chosenBusiness['rMax'] - chosenBusiness['rCustomers']) >= int(incomingMessage):
                             message.body('There is enough space inside the store. Just come inside.')
 
-                            users.update(
-                            {'_id': chosenBusiness['_id']},
-                            {
-                                '$set': {
-                                    'rCustomers': chosenBusiness['rCustomers'] + int(incomingMessage)
-                                }             
-                            }, upsert=False)
+                            changeRCustomers(document=users, ID=chosenBusiness['_id'],
+                                rCustomers=chosenBusiness['rCustomers'] + int(incomingMessage))
 
 
                         else:
-                            users.update(
-                            {'_id': chosenBusiness['_id']},
-                            {
-                                '$push': {
-                                    'rQueue': {
-                                        'cID': sentFrom,
-                                        'groupSize': int(incomingMessage)
-                                    }
-                                }             
-                            }, upsert=False)
+                            addToQ(document=users, ID=chosenBusiness['_id'], 
+                                cID=sentFrom, groupSize=int(incomingMessage))
 
                             message.body('I added you to the queue!')
 
@@ -266,25 +209,3 @@ def chat():
             message.body('I cannot help with that.')
 
     return str(response)
-
-def isInt(x):
-    try: 
-        int(x)
-        return True
-
-    except ValueError:
-        return False
-
-def isPhoneNumber(x):
-    if isInt(x[1:-1]):
-        return True
-
-    return False
-
-def findAllNumbers(listWithDicts):
-    finalList = []
-
-    for eachDict in listWithDicts:
-        finalList.append(eachDict['cID'])
-
-    return finalList
