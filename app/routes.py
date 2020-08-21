@@ -11,7 +11,8 @@ from app.forms import LoginForm, RegisterForm, CreateRoomForm, ManualAddForm
 from app.helper import sendMessage, isInt, isPhoneNumber, findAllValues
 
 from twilio.twiml.messaging_response import MessagingResponse
-from flask import render_template, redirect, url_for, session, request, flash, jsonify
+from flask import render_template, redirect, url_for
+from flask import session, request, flash, jsonify
 
 @app.route('/')
 @app.route('/index')
@@ -186,8 +187,8 @@ def register():
 @app.route('/chat', methods=['GET', 'POST'])
 def chat():
     # get the incoming message
-    sentFrom = request.values.get('From', None)
     sentTo = request.values.get('To', None)
+    sentFrom = request.values.get('From', None)
     incomingMessage = request.values.get('Body', None).upper()
 
     # handling the message
@@ -199,56 +200,87 @@ def chat():
     cBusiness = users.find_one({'uPhone': sentTo})
 
     if cBusiness['rMax'] == 0:
-        currentlyActive = False
-    else:
-        currentlyActive = True
+        message.body("Welcome to {}!".format(cBusiness['bName']))
+        message.body("We are currently not using a virtual queue.")
+        message.body("Please visit the store for more information.")
+
+        return str(response)
+    
+    if 'HELLO' in incomingMessage:
+        message.body("Welcome to {}!".format(cBusiness['bName']))
+        message.body("If you want to join the queue, type 'JOIN'.")
+        message.body("If you want to check your position in line, type 'CHECK'.")
+        message.body("If you want to leave the queue, type 'LEAVE'.")
 
     if 'JOIN' in incomingMessage:
-        if currentlyActive:
-            message.body("Before I add you to the queue, please respond with the number of people in your group.")
-            message.body("If you are here by yourself, just respond with 1.")
+        message.body("""Before you join the queue, please respond
+                        with the number of people in your group.""")
+        message.body("If you're here by yourself, just respond with 1.")
 
-            session['triedJoining'] = True
+        session['triedJoining'] = True
 
-        else:
-            message.body("We are currently not using the VQS. JSON: {}".format(cBusiness))
+        haveResponded = True
 
-    else:
-        if 'triedJoining' in session:
-            if isInt(incomingMessage):
-                if int(incomingMessage) <= 6:
-                    if sentFrom not in findAllValues(cBusiness['rQueue'], 'cID'):
+    if isInt(incomingMessage) and ('triedJoining' in session):
 
-                        if (cBusiness['rMax'] - cBusiness['rCustomers']) >= int(incomingMessage):
-                            message.body('There is enough space inside the store. Just come inside.')
+        if int(incomingMessage) <= 6:
 
-                            changeRCustomers(document=users, ID=cBusiness['_id'],
-                                rCustomers=cBusiness['rCustomers'] + int(incomingMessage))
+            if sentFrom not in findAllValues(cBusiness['rQueue'], 'cID'):
+                availableSpace = cBusiness['rMax'] - cBusiness['rCustomers']
 
+                if availableSpace >= int(incomingMessage):
+                    message.body('There is enough space inside the building.')
+                    message.body('Your group can enter the store right away!')
 
-                        else:
-                            addToQ(document=users, ID=cBusiness['_id'], 
-                                cID=sentFrom, groupSize=int(incomingMessage))
-
-                            newCustomer = {
-                                'cID': sentFrom,
-                                'groupSize': int(incomingMessage)
-                            }
-
-                            message.body('I added you to the queue!')
-
-                    else:
-                        message.body('You are already in the queue. You cannot join again!')
-
-                    session['triedJoining'] = False
+                    changeRCustomers(document=users, ID=cBusiness['_id'],
+                        rCustomers=cBusiness['rCustomers'] + int(incomingMessage))
 
                 else:
-                    message.body('Only 6 people can join the queue with one number.')
-                    message.body('Please try again with a smaller number of people')
+                    addToQ(document=users, ID=cBusiness['_id'], 
+                        cID=sentFrom, groupSize=int(incomingMessage))
+
+                    newCustomer = {
+                        'cID': sentFrom,
+                        'groupSize': int(incomingMessage)
+                    }
+
+                    message.body("Good news! I've added you to the queue.")
+
+                    userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
+                    message.body("You are currently #{} in line.".format(userPosition + 1))
+
+                    message.body("I will let you know when you can enter the building.")
+
             else:
-                message.body('Please enter only a number.')
+                message.body('You are already in the queue!')
+
+                userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
+                message.body("You are currently #{} in line.".format(userPosition + 1))
+
         else:
-            message.body('I cannot help with that.')
+            message.body('Only up to 6 people can join the queue using one phone number.')
+            message.body('If your group has more than 6 people, please visit the building.')
+
+        haveResponded = True
+
+    if 'CHECK' in incomingMessage:
+        userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
+        message.body("You are currently #{} in line.".format(userPosition + 1))
+
+        haveResponded = True
+
+    if 'LEAVE' in incomingMessage:
+        removeFromQ(document=users, ID=cBusiness['_id'], cID=sentFrom)
+        message.body("You have been removed from the queue!")
+        message.body("Please visit again soon.")
+
+        haveResponded = True
+
+    if not haveResponded:
+        message.body("Sorry, I don't know how to help with that.")
+        message.body("If you want to join the queue, type 'JOIN'.")
+        message.body("If you want to check your position in line, type 'CHECK'.")
+        message.body("If you want to leave the queue, type 'LEAVE'.")
 
     return str(response)
 
