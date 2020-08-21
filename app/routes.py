@@ -39,6 +39,12 @@ def subtract():
             nextCustomer = cBusiness['rQueue'][0]
 
             if (cBusiness['rMax'] - cBusiness['rCustomers']) >= nextCustomer['groupSize']:
+                changeRCustomers(document=users, ID=cBusiness['_id'],
+                    rCustomers=cBusiness['rCustomers'] + nextCustomer['groupSize'])
+
+                removeFromQ(document=users, ID=cBusiness['_id'],
+                    cID=nextCustomer['cID'])
+                    
                 if isPhoneNumber(nextCustomer['cID']):
                     sendMessage(client, cBusiness['uPhone'], 
                     nextCustomer['cID'], 'You can come inside now! Please do.')
@@ -48,12 +54,12 @@ def subtract():
                     I have removed them from the queue. Please remember to call them 
                     inside.""".format(nextCustomer['cID'], nextCustomer['groupSize']))
 
-                changeRCustomers(document=users, ID=cBusiness['_id'],
-                    rCustomers=cBusiness['rCustomers'] + nextCustomer['groupSize'])
+                if len(cBusiness['rQueue']) > 0:
+                    furtherCustomer = cBusiness['rQueue'][0]
 
-                removeFromQ(document=users, ID=cBusiness['_id'],
-                    cID=nextCustomer['cID'])
-
+                    if isPhoneNumber(furtherCustomer['cID']):
+                        sendMessage(client, cBusiness['uPhone'], furtherCustomer['cID'], 
+                                'You are now first in line. You will be called into the store shortly.')
                              
         return redirect(url_for('queue'))
 
@@ -70,6 +76,13 @@ def remove(cID):
 
         removeFromQ(document=users, ID=cBusiness['_id'],
                     cID=cID)
+
+        if len(cBusiness['rQueue']) > 0:
+            furtherCustomer = cBusiness['rQueue'][0]
+
+            if isPhoneNumber(furtherCustomer['cID']):
+                sendMessage(client, cBusiness['uPhone'], furtherCustomer['cID'], 
+                        'You are now first in line. You will be called into the store shortly.')
 
         return redirect(url_for('queue'))
 
@@ -107,7 +120,7 @@ def queue():
             cBusiness = users.find_one({'uName': session['uName']})
 
             if form.validate_on_submit():
-                if (cBusiness['rMax'] - cBusiness['rCustomers']) >= form.groupSize.data:
+                if (cBusiness['rMax'] - cBusiness['rCustomers']) >= form.groupSize.data and len(cBusiness['rQueue']) == 0:
                     flash("""There is enough space for '{}' to be inside. Please call them.""".format(form.cID.data))
 
                     changeRCustomers(document=users, ID=cBusiness['_id'],
@@ -212,9 +225,11 @@ def chat():
         message.body("If you want to check your position in line, type 'CHECK'.")
         message.body("If you want to leave the queue, type 'LEAVE'.")
 
+        haveResponded = True
+
     if 'JOIN' in incomingMessage:
-        message.body("""Before you join the queue, please respond
-                        with the number of people in your group.""")
+        message.body("Before you join the queue, please respond")
+        message.body('with the number of people in your group.')
         message.body("If you're here by yourself, just respond with 1.")
 
         session['triedJoining'] = True
@@ -228,7 +243,7 @@ def chat():
             if sentFrom not in findAllValues(cBusiness['rQueue'], 'cID'):
                 availableSpace = cBusiness['rMax'] - cBusiness['rCustomers']
 
-                if availableSpace >= int(incomingMessage):
+                if availableSpace >= int(incomingMessage) and len(cBusiness['rQueue']) == 0:
                     message.body('There is enough space inside the building.')
                     message.body('Your group can enter the store right away!')
 
@@ -238,11 +253,6 @@ def chat():
                 else:
                     addToQ(document=users, ID=cBusiness['_id'], 
                         cID=sentFrom, groupSize=int(incomingMessage))
-
-                    newCustomer = {
-                        'cID': sentFrom,
-                        'groupSize': int(incomingMessage)
-                    }
 
                     message.body("Good news! I've added you to the queue.")
 
@@ -264,15 +274,26 @@ def chat():
         haveResponded = True
 
     if 'CHECK' in incomingMessage:
-        userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
-        message.body("You are currently #{} in line.".format(userPosition + 1))
+        if sentFrom in findAllValues(cBusiness['rQueue'], 'cID'):
+            userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
+            message.body("You are currently #{} in line.".format(userPosition + 1))
+
+        else:
+            message.body('You are not in the queue as of now.')
+            message.body("Type 'JOIN' to get started!")
 
         haveResponded = True
 
     if 'LEAVE' in incomingMessage:
-        removeFromQ(document=users, ID=cBusiness['_id'], cID=sentFrom)
-        message.body("You have been removed from the queue!")
-        message.body("Please visit again soon.")
+        if sentFrom in findAllValues(cBusiness['rQueue'], 'cID'):
+            removeFromQ(document=users, ID=cBusiness['_id'], cID=sentFrom)
+            message.body("You have been removed from the queue!")
+
+            message.body("Please visit again soon.")
+
+        else:
+            message.body('You are not in the queue as of now.')
+            message.body("Type 'JOIN' to get started!")
 
         haveResponded = True
 
