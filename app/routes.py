@@ -129,7 +129,7 @@ def queue():
         return redirect(url_for('create'))
 
     return render_template('queue.html', title='Queue', bName=cBusiness['bName'], form=form, 
-        rCustomers=cBusiness['rCustomers'])
+        rCustomers=cBusiness['rCustomers'], rQueue=cBusiness['rQueue'])
 
 
 @app.route('/login', methods=['GET', 'POST'])

@@ -17,7 +17,18 @@
     <h1>{{ bName }}</h1>
     <h1>Queue</h1>
 
-    <div class='myQ'></div>
+    <div class='myQ'>
+        {% for eachQueuer in rQueue}
+        <div class='qCust'>
+            <span class='cInfo'>
+                Name: <strong>eachQueuer.cID</strong>
+                Size: <strong>eachQueuer.groupSize</strong>
+            </span>
+            <span class='removeC'>
+                <a href="{{ url_for('remove', cID=eachQueuer.cID) }}">Remove</a>
+            </span>
+        </div>
+    </div>
 
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
