@@ -1,26 +1,29 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, IntegerField, SelectField
-from wtforms.validators import DataRequired, NumberRange
+from wtforms.validators import DataRequired, NumberRange, Length
+from app import client
+from app.helper import getAvailableNumbers
 
 class LoginForm(FlaskForm):
-    uName = StringField('Username', validators=[DataRequired()])
-    uPassword = PasswordField('Password', validators=[DataRequired()])
+    uName = StringField('Your Email', validators=[DataRequired()])
+    uPassword = PasswordField('Your Password', validators=[DataRequired()])
     
     submitNow = SubmitField('Login')
 
 class RegisterForm(FlaskForm):
-    uName = StringField('Username', validators=[DataRequired()])
-    uPassword = PasswordField('Password', validators=[DataRequired()])
-    bName = StringField("Your Business's Name (Customers Will See This)", validators=[DataRequired()])
-    uPhone = StringField('Your Phone Number', validators=[DataRequired()])
+    uName = StringField("Your Email", validators=[DataRequired(), Length(min=3, max=24)])
+    uPassword = PasswordField('Your Password', validators=[DataRequired(), Length(min=8, max=20)])
+    bName = StringField("Your Business's Name", validators=[DataRequired(), Length(min=3, max=24)])
+
+    uPhone = SelectField('Choose a Phone Number', choices=getAvailableNumbers(client, "CA"), validators=[DataRequired()])
 
     submitNow = SubmitField('Sign Up')
 
 class CreateRoomForm(FlaskForm):
-    rMax = IntegerField('Max Capacity', validators=[DataRequired(), NumberRange(min=1)])
-    rCustomers = IntegerField('Current Customers', validators=[DataRequired(), NumberRange(1, 50)])
+    rMax = IntegerField("Your Store's Max Capacity", validators=[DataRequired(), NumberRange(min=1)])
+    rCustomers = IntegerField('# of Customers Already Inside', validators=[DataRequired()])
 
-    submitNow = SubmitField('Create Room')
+    submitNow = SubmitField('Create Queue')
 
 class ManualAddForm(FlaskForm):
     cID = StringField("Person's Name", validators=[DataRequired()])

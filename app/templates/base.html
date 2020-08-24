@@ -1,66 +1,50 @@
-<html>
-    <head>
-      {% if title %}
-      <title>{{ title }} — newApp</title>
-      {% else %}
-      <title>Welcome to NewApp!</title>
+{% extends 'bootstrap/base.html' %}
+
+{% block title %}
+    {% if title %}{{ title }} — vQueue{% else %}Welcome to vQueue{% endif %}
+{% endblock %}
+
+{% block navbar %}
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div>
+      <a class="navbar-brand" href="{{ url_for('index') }}">vQueue</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+    </div>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav">
+        {% if not session['uName'] %}
+        <a class="btn btn-light" href="{{ url_for('login') }}">Login</a>
+        {% else %}
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('index') }}">Dashboard</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('queue') }}">Queue</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>   
+  </nav>
+  <div class="mb-4"></div>
+{% endblock %}
+
+{% block content %}
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-info" role="alert">{{ message }}</div>
+        {% endfor %}
       {% endif %}
-    </head>
-    <body>
-        <div>
-          newApp
-          <a href="{{ url_for('index') }}">Home</a>
-          <a href="{{ url_for('login') }}">Login</a>
-          <a href="{{ url_for('register') }}">Register</a>
-          <a href="{{ url_for('create') }}">Create</a>
-          <a href="{{ url_for('queue') }}">Queue</a>
-        </div>
-        
-        <hr>
-        {% block content %}{% endblock %}
-        {% block script %}
-          <script src="{{ url_for('static', filename='jquery-3.3.1.min.js') }}"></script>
-          <script>
-            $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    {% endwith %}
 
-            function applyUpdate(){
-              $.ajax({
-                method: 'POST',
-                url: {{ url_for('update')|tojson }},
-                data: {'bName': '{{ bName }}'},
-                success: function(response){
-                  $('.rCust').text(response.rCustomers);
-                    
-                  $('.myQ').empty();
-                    
-                  for (c = 0; c < response.rQueue.length; c++) {
-                    var customerID = response.rQueue[c].cID;
-                    var customerSize = response.rQueue[c].groupSize;
-                    
-                    $('.myQ').append(returnHTML(customerID, customerSize));
-                  }
-                }
-              })
-            }
-
-            function returnHTML(customerID, customerSize){
-              var finalHTML = `<div class="qCust"> 
-                      <span class="cInfo">
-                        Name: <strong>${customerID}</strong>, 
-                        Size: <strong>${customerSize}</strong>
-                      </span>
-                      <span class="removeC">
-                        <a href="${$SCRIPT_ROOT}/remove/${customerID}">Remove</a>
-                      </span>
-                    </div>`;
-
-              return finalHTML;
-            }
-
-            $(document).ready(function(){
-                setInterval(applyUpdate, 5000);
-            });
-          </script>
-        {% endblock %}
-    </body>
-</html>
+    {% block appContent %}{% endblock %}
+    {% block script %}{% endblock %}
+  </div>
+{% endblock %}

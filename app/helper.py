@@ -1,3 +1,12 @@
+def getAvailableNumbers(twilioClient, chosenCountry):
+    allNums = []
+    localNums = twilioClient.available_phone_numbers(chosenCountry).local.list(limit=50)
+
+    for record in localNums:
+        allNums.append(record.phone_number)
+
+    return allNums
+
 def sendMessage(twilioClient, fromNumber, toNumber, messageToSend):
     sentMessage = twilioClient.messages.create(body=messageToSend, from_=fromNumber,to=toNumber)
 

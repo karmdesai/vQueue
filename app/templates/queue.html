@@ -1,52 +1,108 @@
 {% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
 
-{% block content %}
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-        <ul class=flashes>
-        {% for message in messages %}
-        <p>{{ message }}</p>
-        {% endfor %}
-        </ul>
-    {% endif %}
-    {% endwith %}
-    <div>
-        <h1 class='title'>Current Customers: <span class='rCust'>{{ rCustomers }}</span></h1>
-        <a href="{{ url_for('subtract') }}">A Customer Has Left</a>
+{% block styles %}
+    {{super()}}
+    <link rel="stylesheet" href="{{url_for('static', filename='main.css')}}">
+{% endblock %}
+
+{% block appContent %}
+    <div class="row mb-3"></div>
+
+    <div class="text-center">
+        <h1>{{ bName }}'s Queue</h1>
+        <p class="display-5">Your max capacity is set to <strong>
+            {{ rMax }}</strong> customers.</p>
     </div>
-    <h1>{{ bName }}</h1>
-    <h1>Queue</h1>
 
-    <div class='myQ'>
-        {% for eachQueuer in rQueue %}
-        <div class='qCust'>
-            <span class='cInfo'>
-                Name: <strong>{{ eachQueuer.cID }}</strong>,
-                Size: <strong>{{ eachQueuer.groupSize }}</strong>
-            </span>
-            <span class='removeC'>
-                <a href="{{ url_for('remove', cID=eachQueuer.cID) }}">Remove</a>
-            </span>
+    <div class="row mb-4"></div>
+
+        
+    <div class="row text-center">
+        <div class="col-md-3">
+            <h3>Customers Currently Inside</h3>
+            <h1 class='rCust display-1'>{{ rCustomers }}</h1>
+            <a href="{{ url_for('subtract') }}">
+                <svg width="3em" height="3em" viewBox="0 0 16 16" class="bi bi-arrow-down-circle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 5a.5.5 0 0 0-1 0v4.793L5.354 7.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 9.793V5z"/>
+                </svg>
+            </a>
         </div>
-        {% endfor %}
+        <div class="col-md-6">
+            <h1>Queue</h1>
+            <div class='myQ'>
+                {% for eachQueuer in rQueue %}
+                <div class='qCust'>
+                    <span class='cInfo'>
+                        #{{ rQueue.index(eachQueuer) + 1 }} — 
+                        <strong>{{ eachQueuer.cID }}</strong>,
+                        Group Size of <strong>{{ eachQueuer.groupSize }}</strong>
+                    </span>
+                    <span class='removeC'>
+                        <a href="{{ url_for('remove', cID=eachQueuer.cID) }}">
+                            <svg class="x" width="0.9em" height="0.9em" viewBox="0 0 16 16" class="bi bi-x-circle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-4.146-3.146a.5.5 0 0 0-.708-.708L8 7.293 4.854 4.146a.5.5 0 1 0-.708.708L7.293 8l-3.147 3.146a.5.5 0 0 0 .708.708L8 8.707l3.146 3.147a.5.5 0 0 0 .708-.708L8.707 8l3.147-3.146z"/>
+                            </svg>
+                        </a>
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <h3>Add Customer</h3>
+            {{ wtf.quick_form(form) }}
+        </div>
     </div>
 
-    <form action="" method="post" novalidate>
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.cID.label }}<br>
-            {{ form.cID }}
-            {% for error in form.cID.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.groupSize.label }}<br>
-            {{ form.groupSize }}
-            {% for error in form.groupSize.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>{{ form.manualAdd() }}</p>
-    </form>
+{% endblock %}
+{% block script %}
+    <script src="{{ url_for('static', filename='jquery-3.3.1.min.js') }}"></script>
+    <script>
+        $(document).ready(function(){
+            $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+        
+            function applyUpdate(){
+                $.ajax({
+                method: 'POST',
+                url: {{ url_for('update')|tojson }},
+                data: {'bName': '{{ bName }}'},
+                success: function(response){
+                        $('.rCust').text(response.rCustomers);
+                
+                        $('.myQ').empty();
+                
+                        for (c = 0; c < response.rQueue.length; c++) {
+                            var customerPos = c + 1;
+                            var customerID = response.rQueue[c].cID;
+                            var customerSize = response.rQueue[c].groupSize;
+                
+                            $('.myQ').append(returnHTML(customerPos, customerID, customerSize));
+                        }
+                    }
+                })
+            }
+        
+            function returnHTML(customerPos, customerID, customerSize){
+                var finalHTML = `<div class="qCust"> 
+                                <span class="cInfo">
+                                    #${customerPos} — 
+                                    <strong>${customerID}</strong>,
+                                    Group Size of <strong>${customerSize}</strong>
+                                </span>
+                                <span class="removeC">
+                                    <a href="${$SCRIPT_ROOT}/remove/${customerID}">
+                                        <svg class="x" width="0.9em" height="0.9em" viewBox="0 0 16 16" class="bi bi-x-circle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                            <path fill-rule="evenodd" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-4.146-3.146a.5.5 0 0 0-.708-.708L8 7.293 4.854 4.146a.5.5 0 1 0-.708.708L7.293 8l-3.147 3.146a.5.5 0 0 0 .708.708L8 8.707l3.146 3.147a.5.5 0 0 0 .708-.708L8.707 8l3.147-3.146z"/>
+                                        </svg>
+                                    </a>
+                                </span>
+                                </div>`;
+        
+                return finalHTML;
+            }
+        
+            setInterval(applyUpdate, 5000);
+        });
+    </script>
 {% endblock %}

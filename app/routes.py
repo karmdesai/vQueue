@@ -14,21 +14,38 @@ from twilio.twiml.messaging_response import MessagingResponse
 from flask import render_template, redirect, url_for
 from flask import session, request, flash, jsonify
 
-@app.route('/')
-@app.route('/index')
+@app.route('/index', methods=['POST', 'GET'])
 def index():
-    if 'uName' in session:
-        user = {'uName': session['uName']}
-    else:
-        user = {'uName': 'Not Logged In'}
+    form = CreateRoomForm()
+    users = mongo.db.users
 
-    return render_template('index.html', title='Home', user=user)
+    if 'uName' in session:
+        cBusiness = users.find_one({'uName': session['uName']})
+
+        if form.validate_on_submit():
+            if form.rCustomers.data <= form.rMax.data:
+                changeAllR(document=users, ID=cBusiness['_id'], rMax=form.rMax.data, 
+                    rCustomers=form.rCustomers.data, rQueue=[])
+
+                session['activeRoom'] = True
+
+                return redirect(url_for('queue'))
+            else:
+                flash("""The number of customers already inside your building 
+                    must be less than the maximum capacity. Please try again.""")
+
+                return redirect(url_for('index'))
+
+    else:
+        return redirect(url_for('login'))
+
+    return render_template('index.html', title='Home', form=form, bName=cBusiness['bName'])
 
 @app.route('/subtract')
 def subtract():
     users = mongo.db.users
 
-    if session['activeRoom'] == True:
+    if 'activeRoom' in session:
         cBusiness = users.find_one({'uName': session['uName']})
 
         if cBusiness['rCustomers'] > 0:
@@ -38,7 +55,7 @@ def subtract():
         if len(cBusiness['rQueue']) > 0:
             nextCustomer = cBusiness['rQueue'][0]
 
-            if (cBusiness['rMax'] - cBusiness['rCustomers']) >= nextCustomer['groupSize']:
+            if (cBusiness['rMax'] - cBusiness['rCustomers'] + 1) >= nextCustomer['groupSize']:
                 changeRCustomers(document=users, ID=cBusiness['_id'],
                     rCustomers=cBusiness['rCustomers'] + nextCustomer['groupSize'])
 
@@ -50,7 +67,7 @@ def subtract():
                     nextCustomer['cID'], 'You can come inside now! Please do.')
                                     
                 else:
-                    flash("""There was enough space to call {} into the store. They are a group of {}.
+                    flash("""There is enough space to call {} into the store.
                     I have removed them from the queue. Please remember to call them 
                     inside.""".format(nextCustomer['cID'], nextCustomer['groupSize']))
 
@@ -64,14 +81,26 @@ def subtract():
         return redirect(url_for('queue'))
 
     else:
-        return redirect(url_for('create'))
+        return redirect(url_for('index'))
 
+@app.route('/logout')
+def logout():
+    users = mongo.db.users
+
+    if 'uName' in session:
+        cBusiness = users.find_one({'uName': session['uName']})
+
+        changeAllR(document=users, ID=cBusiness['_id'], rMax=0, rCustomers=0, rQueue=[])
+
+        session.pop('uName')
+
+    return redirect(url_for('login'))
 
 @app.route('/remove/<cID>')
 def remove(cID):
     users = mongo.db.users
 
-    if session['activeRoom'] == True:
+    if 'activeRoom' in session:
         cBusiness = users.find_one({'uName': session['uName']})
 
         removeFromQ(document=users, ID=cBusiness['_id'],
@@ -87,28 +116,7 @@ def remove(cID):
         return redirect(url_for('queue'))
 
     else:
-        return redirect(url_for('create'))
-
-@app.route('/create', methods=['GET', 'POST'])
-def create():
-    form = CreateRoomForm()
-    users = mongo.db.users
-    
-    if 'uName' in session:
-        cBusiness = users.find_one({'uName': session['uName']})
-
-        if form.validate_on_submit():
-            changeAllR(document=users, ID=cBusiness['_id'], rMax=form.rMax.data, 
-                rCustomers=form.rCustomers.data, rQueue=[])
-
-            session['activeRoom'] = True
-
-            return redirect(url_for('queue'))
-
-    else:
-        return redirect(url_for('login'))
-
-    return render_template('create.html', title='Create', form=form)
+        return redirect(url_for('index'))
 
 @app.route('/queue', methods=['GET', 'POST'])
 def queue():
@@ -116,34 +124,33 @@ def queue():
     form = ManualAddForm()
 
     if 'activeRoom' in session:
-        if session['activeRoom'] == True:
-            cBusiness = users.find_one({'uName': session['uName']})
+        cBusiness = users.find_one({'uName': session['uName']})
 
-            if form.validate_on_submit():
-                if (cBusiness['rMax'] - cBusiness['rCustomers']) >= form.groupSize.data and len(cBusiness['rQueue']) == 0:
-                    flash("""There is enough space for '{}' to be inside. Please call them.""".format(form.cID.data))
+        if form.validate_on_submit():
+            if (cBusiness['rMax'] - cBusiness['rCustomers']) >= form.groupSize.data and len(cBusiness['rQueue']) == 0:
+                flash("""There is enough space for '{}' to be inside. Please call them.""".format(form.cID.data))
 
-                    changeRCustomers(document=users, ID=cBusiness['_id'],
-                        rCustomers=cBusiness['rCustomers'] + form.groupSize.data)
+                changeRCustomers(document=users, ID=cBusiness['_id'],
+                    rCustomers=cBusiness['rCustomers'] + form.groupSize.data)
+
+            else:
+                if form.cID.data not in findAllValues(cBusiness['rQueue'], 'cID'):
+                    addToQ(document=users, ID=cBusiness['_id'], 
+                        cID=form.cID.data, groupSize=form.groupSize.data)    
 
                 else:
-                    if form.cID.data not in findAllValues(cBusiness['rQueue'], 'cID'):
-                        addToQ(document=users, ID=cBusiness['_id'], 
-                            cID=form.cID.data, groupSize=form.groupSize.data)    
+                    flash("""The name '{}' is already taken. Please choose a different 
+                    name.""".format(form.cID.data))
 
-                    else:
-                        flash("""The name '{}' is already taken. Please choose a different 
-                        name.""".format(form.cID.data))
+            return redirect(url_for('queue'))
 
-                return redirect(url_for('queue'))
-
-        else:
-            return redirect(url_for('create'))
     else:
-        return redirect(url_for('create'))
+        flash("You have not created a queue yet.")
+
+        return redirect(url_for('index'))
 
     return render_template('queue.html', title='Queue', bName=cBusiness['bName'], form=form, 
-        rCustomers=cBusiness['rCustomers'], rQueue=cBusiness['rQueue'])
+        rMax=cBusiness['rMax'], rCustomers=cBusiness['rCustomers'], rQueue=cBusiness['rQueue'])
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -151,17 +158,23 @@ def login():
     form = LoginForm()
     users = mongo.db.users
 
-    if form.validate_on_submit():
-        loginUser = users.find_one({'uName': form.uName.data})
+    if 'uName' not in session:
+        if 'activeRoom' not in session:
+            if form.validate_on_submit():
+                loginUser = users.find_one({'uName': form.uName.data})
 
-        if loginUser:
-            if bcrypt.hashpw((form.uPassword.data).encode('utf-8'), loginUser['uPassword']) == loginUser['uPassword']:
-                session['uName'] = form.uName.data
+                if loginUser:
+                    if bcrypt.hashpw((form.uPassword.data).encode('utf-8'), loginUser['uPassword']) == loginUser['uPassword']:
+                        session['uName'] = form.uName.data
 
-                return redirect(url_for('create'))
+                        return redirect(url_for('index'))
 
-        flash("Invalid Email/Password combination. Try again.")
-        return redirect(url_for('login'))
+                flash("Invalid Email/Password combination. Try again.")
+
+                return redirect(url_for('login'))
+
+    else:
+        return redirect(url_for('index'))
 
     return render_template('login.html', title='Login', form=form)
 
@@ -170,30 +183,33 @@ def register():
     form = RegisterForm()
     users = mongo.db.users
 
-    if form.validate_on_submit():
-        existingUser = users.find_one({'uName': form.uName.data})
+    if 'activeRoom' not in session:
+        if form.validate_on_submit():
+            existingUser = users.find_one({'uName': form.uName.data})
 
-        if existingUser is None:
-            hashedPass = bcrypt.hashpw(form.uPassword.data.encode('utf-8'), bcrypt.gensalt())
+            if existingUser is None:
+                hashedPass = bcrypt.hashpw(form.uPassword.data.encode('utf-8'), bcrypt.gensalt())
 
-            users.insert(
-                {
-                    'uName': form.uName.data, 
-                    'uPassword': hashedPass, 
-                    'bName': form.bName.data,
-                    'uPhone': form.uPhone.data,
-                    'rMax': 0,
-                    'rCustomers': 0,
-                    'rQueue': []
-                }
-            )
+                users.insert(
+                    {
+                        'uName': form.uName.data, 
+                        'uPassword': hashedPass, 
+                        'bName': form.bName.data,
+                        'uPhone': form.uPhone.data,
+                        'rMax': 0,
+                        'rCustomers': 0,
+                        'rQueue': []
+                    }
+                )
 
-            session['uName'] = form.uName.data
+                session['uName'] = form.uName.data
 
-            return redirect(url_for('create'))
-        
-        flash("That username already exists. Use another username or login instead.")
-        return redirect(url_for('register'))
+                return redirect(url_for('index'))
+            
+            flash("That username already exists. Use another username or login instead.")
+            return redirect(url_for('register'))
+    else:
+        return redirect(url_for('index'))
 
     return render_template('register.html', title='Register', form=form)
 
