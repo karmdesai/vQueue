@@ -1,5 +1,6 @@
 .myQ {
-    overflow-y: scroll;
+    max-height: 10vh;
+    overflow-y: auto;
 }
 
 .x:hover {

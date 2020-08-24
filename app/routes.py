@@ -8,7 +8,7 @@ from app import client
 
 from app.relations import changeAllR, changeRCustomers, addToQ, removeFromQ
 from app.forms import LoginForm, RegisterForm, CreateRoomForm, ManualAddForm
-from app.helper import sendMessage, isInt, isPhoneNumber, findAllValues
+from app.helper import sendMessage, isInt, isPhoneNumber, findAllValues, createNumber
 
 from twilio.twiml.messaging_response import MessagingResponse
 from flask import render_template, redirect, url_for
@@ -150,7 +150,8 @@ def queue():
         return redirect(url_for('index'))
 
     return render_template('queue.html', title='Queue', bName=cBusiness['bName'], form=form, 
-        rMax=cBusiness['rMax'], rCustomers=cBusiness['rCustomers'], rQueue=cBusiness['rQueue'])
+        rMax=cBusiness['rMax'], rCustomers=cBusiness['rCustomers'], 
+        rQueue=cBusiness['rQueue'], uPhone=cBusiness['uPhone'])
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -189,6 +190,8 @@ def register():
 
             if existingUser is None:
                 hashedPass = bcrypt.hashpw(form.uPassword.data.encode('utf-8'), bcrypt.gensalt())
+
+                createNumber(client, form.uPhone.data)
 
                 users.insert(
                     {
@@ -234,16 +237,9 @@ def chat():
         message.body("Please visit the store for more information.")
 
         return str(response)
-    
-    if 'HELLO' in incomingMessage:
-        message.body("Welcome to {}!".format(cBusiness['bName']))
-        message.body("If you want to join the queue, type 'JOIN'.")
-        message.body("If you want to check your position in line, type 'CHECK'.")
-        message.body("If you want to leave the queue, type 'LEAVE'.")
-
-        haveResponded = True
 
     if 'JOIN' in incomingMessage:
+        message.body("Welcome to {}!".format(cBusiness['bName']))
         message.body("Before you join the queue, please respond")
         message.body('with the number of people in your group.')
         message.body("If you're here by yourself, just respond with 1.")
@@ -254,10 +250,10 @@ def chat():
 
     if isInt(incomingMessage) and ('triedJoining' in session):
 
-        if int(incomingMessage) <= 6:
+        if sentFrom not in findAllValues(cBusiness['rQueue'], 'cID'):
+            availableSpace = cBusiness['rMax'] - cBusiness['rCustomers']
 
-            if sentFrom not in findAllValues(cBusiness['rQueue'], 'cID'):
-                availableSpace = cBusiness['rMax'] - cBusiness['rCustomers']
+            if int(incomingMessage) <= 8:
 
                 if availableSpace >= int(incomingMessage) and len(cBusiness['rQueue']) == 0:
                     message.body('There is enough space inside the building.')
@@ -267,25 +263,22 @@ def chat():
                         rCustomers=cBusiness['rCustomers'] + int(incomingMessage))
 
                 else:
+                    message.body("Good news! I've added you to the queue.")
+                    message.body("If you want to check your position in line, type 'CHECK'.")
+                    message.body("I will let you know when you can enter the building.")
+
                     addToQ(document=users, ID=cBusiness['_id'], 
                         cID=sentFrom, groupSize=int(incomingMessage))
 
-                    message.body("Good news! I've added you to the queue.")
-
-                    userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
-                    message.body("You are currently #{} in line.".format(userPosition + 1))
-
-                    message.body("I will let you know when you can enter the building.")
-
             else:
-                message.body('You are already in the queue!')
-
-                userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
-                message.body("You are currently #{} in line.".format(userPosition + 1))
+                message.body('Only up to 8 people can join the queue using one phone number.')
+                message.body('If your group has more than 8 people, please visit the building.')
 
         else:
-            message.body('Only up to 6 people can join the queue using one phone number.')
-            message.body('If your group has more than 6 people, please visit the building.')
+            message.body('You are already in the queue!')
+
+            userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
+            message.body("You are currently #{} in line.".format(userPosition + 1))
 
         haveResponded = True
 
@@ -300,24 +293,10 @@ def chat():
 
         haveResponded = True
 
-    if 'LEAVE' in incomingMessage:
-        if sentFrom in findAllValues(cBusiness['rQueue'], 'cID'):
-            removeFromQ(document=users, ID=cBusiness['_id'], cID=sentFrom)
-            message.body("You have been removed from the queue!")
-
-            message.body("Please visit again soon.")
-
-        else:
-            message.body('You are not in the queue as of now.')
-            message.body("Type 'JOIN' to get started!")
-
-        haveResponded = True
-
     if not haveResponded:
         message.body("Sorry, I don't know how to help with that.")
         message.body("If you want to join the queue, type 'JOIN'.")
         message.body("If you want to check your position in line, type 'CHECK'.")
-        message.body("If you want to leave the queue, type 'LEAVE'.")
 
     return str(response)
 

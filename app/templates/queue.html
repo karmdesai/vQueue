@@ -13,6 +13,8 @@
         <h1>{{ bName }}'s Queue</h1>
         <p class="display-5">Your max capacity is set to <strong>
             {{ rMax }}</strong> customers.</p>
+        <p class="display-5">Your vQueue phone number is<strong>
+            {{ uPhone }}</strong>.</p>
     </div>
 
     <div class="row mb-4"></div>
@@ -50,7 +52,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <h3>Add Customer</h3>
+            <h3>Add Customer Manually</h3>
             {{ wtf.quick_form(form) }}
         </div>
     </div>
