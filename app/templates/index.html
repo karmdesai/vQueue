@@ -9,6 +9,11 @@
         <div class="col-md-4">
             <h3>Start a New Session</h1>
             {{ wtf.quick_form(form) }}
+            {% for field, errors in form.errors.items() %}
+            <div class="alert alert-error">
+                <strong>Error</strong>: {{ ', '.join(errors) }}
+            </div>
+            {% endfor %}
         </div>
         <div class="col-md-4">
             <button class="btn btn-primary" href="{{ url_for('queue') }}">

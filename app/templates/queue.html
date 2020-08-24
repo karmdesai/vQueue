@@ -18,7 +18,6 @@
     </div>
 
     <div class="row mb-4"></div>
-
         
     <div class="row text-center">
         <div class="col-md-3">
@@ -54,6 +53,11 @@
         <div class="col-md-3">
             <h3>Add Customer Manually</h3>
             {{ wtf.quick_form(form) }}
+            {% for field, errors in form.errors.items() %}
+            <div class="alert alert-error">
+                <strong>Error</strong>: {{ ', '.join(errors) }}
+            </div>
+            {% endfor %}
         </div>
     </div>
 

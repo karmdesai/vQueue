@@ -44,3 +44,13 @@ def removeFromQ(document, ID, cID):
                 }
             }
         }, upsert=False)
+
+def setPassword(document, ID, newHashedPass):
+    document.update({
+            '_id': ID
+        }, 
+        {
+            '$set': {
+                'uPassword': newHashedPass
+            }
+        }, upsert=False)

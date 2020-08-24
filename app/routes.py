@@ -1,14 +1,17 @@
 import dns
+import jwt
 import bcrypt
 import requests
+from time import time
 
 from app import app
 from app import mongo
 from app import client
 
-from app.relations import changeAllR, changeRCustomers, addToQ, removeFromQ
-from app.forms import LoginForm, RegisterForm, CreateRoomForm, ManualAddForm
+from app.relations import changeAllR, changeRCustomers, addToQ, removeFromQ, setPassword
+from app.forms import LoginForm, RegisterForm, CreateRoomForm, ManualAddForm, ResetPasswordRequestForm, ResetPasswordForm
 from app.helper import sendMessage, isInt, isPhoneNumber, findAllValues, createNumber
+from app.email import sendEmail
 
 from twilio.twiml.messaging_response import MessagingResponse
 from flask import render_template, redirect, url_for
@@ -307,3 +310,78 @@ def update():
     cBusiness = users.find_one({'bName': bName})
 
     return jsonify(rQueue=cBusiness['rQueue'], rCustomers=cBusiness['rCustomers'])
+
+@app.route('/reset', methods=['GET', 'POST'])
+def reset():
+    form = ResetPasswordRequestForm()
+    users = mongo.db.users
+
+    if 'uName' in session:
+        return redirect(url_for('index'))
+
+    if form.validate_on_submit():
+        existingUser = users.find_one({'uName': form.uEmail.data})
+
+        if existingUser:
+            sendPasswordReset(existingUser['uName'])
+            
+            flash('Check your email address for instructions on how to reset your password!')
+            return redirect(url_for('login'))
+
+        else:
+            flash('You have not created an account yet. Please register with us!')
+            return redirect(url_for('register'))
+
+    return render_template('reset.html', title='Reset Password', form=form)
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    users = mongo.db.users
+
+    if 'uName' in session:
+        return redirect(url_for('index'))
+
+    user = verifyToken(token)
+
+    if not user:
+        return redirect(url_for('index'))
+
+    form = ResetPasswordForm()
+    cBusiness = users.find_one({'uName': user})
+
+    if form.validate_on_submit():
+        hashedPass = bcrypt.hashpw(form.uPass.data.encode('utf-8'), bcrypt.gensalt())
+
+        setPassword(users, ID=cBusiness['_id'], newHashedPass=hashedPass)
+        flash('Success! Your password has been reset.')
+        
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', form=form)
+
+def getResetToken(uEmail, expiresIn=1000):
+    return jwt.encode(
+        {'resetPassword': uEmail, 'expTime': time() + expiresIn},
+            'SECRETS', algorithm='HS256').decode('utf-8')
+
+def verifyToken(token):
+    users = mongo.db.users
+
+    try:
+        uEmail = jwt.decode(token, 'SECRETS',
+                    algorithms=['HS256'])['resetPassword']
+    except:
+        return
+
+    return users.find_one({'uName': uEmail})['uName']
+
+def sendPasswordReset(user):
+    token = getResetToken(user)
+
+    sendEmail('[vQueue] Reset Your Password',
+               sender=app.config['MAIL_USERNAME'],
+               recipients=user,
+               text_body=render_template('email/reset.txt',
+                                         user=user, token=token),
+               html_body=render_template('email/reset.html',
+                                         user=user, token=token))
