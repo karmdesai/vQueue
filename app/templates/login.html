@@ -2,17 +2,24 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 
 {% block appContent %}
-    <h1>Sign In</h1>
     <div class="row">
         <div class="col-md-4">
+            <h1>Sign In</h1>
             {{ wtf.quick_form(form) }}
             {% for field, errors in form.errors.items() %}
-            <div class="alert alert-error">
+            <div class="alert alert-danger">
                 <strong>Error</strong>: {{ ', '.join(errors) }}
             </div>
             {% endfor %}
+            
+            <div class="mb-4"></div>
+            <p>New User? <a href="{{ url_for('register') }}">Register Here</a></p>
+            <p>Forgot Your Password? <a href="{{ url_for('reset') }}">Click to Reset</a></p>
         </div>
+        <div class="col-md-1"></div>
+        <div class="col-md-6">
+            <img src="{{ url_for('static', filename='computerPeople.jpg') }}" class="img-fluid">
+        </div>
+        <div class="col-md-1"></div>
     </div>
-    <p>New User? <a href="{{ url_for('register') }}">Register Here</a></p>
-    <p>Forgot Your Password? <a href="{{ url_for('reset') }}">Click to Reset</a></p>
 {% endblock %}

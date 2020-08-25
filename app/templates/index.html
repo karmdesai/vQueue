@@ -10,7 +10,7 @@
             <h3>Start a New Session</h1>
             {{ wtf.quick_form(form) }}
             {% for field, errors in form.errors.items() %}
-            <div class="alert alert-error">
+            <div class="alert alert-danger">
                 <strong>Error</strong>: {{ ', '.join(errors) }}
             </div>
             {% endfor %}
