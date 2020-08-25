@@ -2,9 +2,9 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 
 {% block appContent %}
-    <h1>Register</h1>
     <div class="row">
         <div class="col-md-4">
+            <h1>Register</h1>
             {{ wtf.quick_form(form) }}
             {% for field, errors in form.errors.items() %}
             <div class="alert alert-danger">
@@ -12,5 +12,10 @@
             </div>
             {% endfor %}
         </div>
+        <div class="col-md-1"></div>
+        <div class="col-md-6">
+            <img src="{{ url_for('static', filename='img/system.png') }}" class="img-fluid">
+        </div>
+        <div class="col-md-1"></div>
     </div>
 {% endblock %}
