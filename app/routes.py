@@ -10,11 +10,12 @@ from app import client
 
 from app.relations import changeAllR, changeRCustomers, addToQ, removeFromQ, setPassword
 from app.forms import LoginForm, RegisterForm, CreateRoomForm, ManualAddForm, ResetPasswordRequestForm, ResetPasswordForm
-from app.helper import sendMessage, isInt, isPhoneNumber, findAllValues, createNumber
+from app.helper import sendMessage, isInt, isPhoneNumber, findAllValues, createNumber, respondWith
 from app.email import sendEmail
 
-from twilio.twiml.messaging_response import MessagingResponse
-from flask import render_template, redirect, url_for
+from plivo import plivoxml
+import plivo
+from flask import render_template, redirect, url_for, Response
 from flask import session, request, flash, jsonify
 
 @app.route('/index', methods=['POST', 'GET'])
@@ -52,8 +53,11 @@ def subtract():
         cBusiness = users.find_one({'uName': session['uName']})
 
         if cBusiness['rCustomers'] > 0:
+
             changeRCustomers(document=users, ID=cBusiness['_id'],
-                rCustomers=(cBusiness['rCustomers'] - 1))
+                rCustomers=cBusiness['rCustomers'] - 1)
+
+            cBusiness = users.find_one({'uName': session['uName']})
 
         if len(cBusiness['rQueue']) > 0:
             nextCustomer = cBusiness['rQueue'][0]
@@ -74,12 +78,16 @@ def subtract():
                 removeFromQ(document=users, ID=cBusiness['_id'],
                     cID=nextCustomer['cID'])
 
+                cBusiness = users.find_one({'uName': session['uName']})
+
                 if len(cBusiness['rQueue']) > 0:
                     furtherCustomer = cBusiness['rQueue'][0]
 
                     if isPhoneNumber(furtherCustomer['cID']):
                         sendMessage(client, cBusiness['uPhone'], furtherCustomer['cID'], 
                                 'You are now first in line. You will be called into the store shortly.')
+
+                cBusiness = users.find_one({'uName': session['uName']})
 
                 if len(cBusiness['rQueue']) > 1:
                     furthestCustomer = cBusiness['rQueue'][1]
@@ -115,6 +123,8 @@ def remove(cID):
 
         removeFromQ(document=users, ID=cBusiness['_id'],
                     cID=cID)
+
+        cBusiness = users.find_one({'uName': session['uName']})
 
         if len(cBusiness['rQueue']) > 0:
             furtherCustomer = cBusiness['rQueue'][0]
@@ -229,36 +239,50 @@ def register():
 @app.route('/chat', methods=['GET', 'POST'])
 def chat():
     # get the incoming message
-    sentTo = request.values.get('To', None)
-    sentFrom = request.values.get('From', None)
-    incomingMessage = request.values.get('Body', None).upper()
+    sentTo = request.values.get('To')
+    sentFrom = request.values.get('From')
+    incomingMessage = request.values.get('Text').upper()
 
     # handling the message
-    response = MessagingResponse()
-    message = response.message()
+    response = plivoxml.ResponseElement()
+    textToSend = ''
     haveResponded = False
 
     users = mongo.db.users
     cBusiness = users.find_one({'uPhone': sentTo})
 
     if cBusiness['rMax'] == 0:
-        message.body("Welcome to {}!".format(cBusiness['bName']))
-        message.body("We are currently not using a virtual queue.")
-        message.body("Please visit the store for more information.")
+        textToSend += "Welcome to {}! ".format(cBusiness['bName'])
+        textToSend += "We are currently not using a virtual queue. "
+        textToSend += "Please visit the store for more information."
 
-        return str(response)
+        respondWith(response, fromNumber=sentFrom, toNumber=sentTo, messageToSend=textToSend)
+        return Response(response.to_string(), mimetype='application/xml')
 
     if 'JOIN' in incomingMessage:
-        message.body("Welcome to {}!".format(cBusiness['bName']))
-        message.body("Before you join the queue, please respond")
-        message.body('with the number of people in your group.')
-        message.body("If you're here by yourself, respond with 1.")
+        if sentFrom not in findAllValues(cBusiness['rQueue'], 'cID'):
+            availableSpace = cBusiness['rMax'] - cBusiness['rCustomers']
+            textToSend += "Welcome to {}! ".format(cBusiness['bName'])
+            textToSend += "Before you join the queue, please respond "
+            textToSend += 'with the number of people in your group. '
+            textToSend += "If you're here by yourself, respond with 1."
 
-        session['triedJoining'] = True
+            haveResponded = True
 
-        haveResponded = True
+            respondWith(response, fromNumber=sentFrom, toNumber=sentTo, messageToSend=textToSend)
+            return Response(response.to_string(), mimetype='application/xml')
+            
+        else:
+            textToSend += 'You are already in the queue! '
 
-    if isInt(incomingMessage) and ('triedJoining' in session):
+            userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
+            textToSend += "You are currently #{} in line.".format(userPosition + 1)
+
+            respondWith(response, fromNumber=sentFrom, toNumber=sentTo, messageToSend=textToSend)
+            return Response(response.to_string(), mimetype='application/xml')
+
+
+    if isInt(incomingMessage):
 
         if sentFrom not in findAllValues(cBusiness['rQueue'], 'cID'):
             availableSpace = cBusiness['rMax'] - cBusiness['rCustomers']
@@ -266,40 +290,54 @@ def chat():
             if int(incomingMessage) <= cBusiness['rMax']:
 
                 if availableSpace >= int(incomingMessage) and len(cBusiness['rQueue']) == 0:
-                    message.body('There is enough space inside the building.')
-                    message.body('Your group can enter the store right away!')
+                    textToSend += 'There is enough space inside the building. '
+                    textToSend += 'Your group can enter the store right away!'
 
                     changeRCustomers(document=users, ID=cBusiness['_id'],
                         rCustomers=cBusiness['rCustomers'] + int(incomingMessage))
 
+                    respondWith(response, fromNumber=sentFrom, toNumber=sentTo, messageToSend=textToSend)
+                    return Response(response.to_string(), mimetype='application/xml')
+
                 else:
-                    message.body("You joined the queue!")
-
-                    userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
-                    message.body("Your position is currently #{}.".format(userPosition + 1))
-
-                    message.body("I'll notify you when you can enter the building.")
+                    textToSend += "You joined the queue! "
 
                     addToQ(document=users, ID=cBusiness['_id'], 
                         cID=sentFrom, groupSize=int(incomingMessage))
 
+                    cBusiness = users.find_one({'uPhone': sentTo})
+
+                    userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
+                    textToSend += "Your position is currently #{}. ".format(userPosition + 1)
+
+                    textToSend += "I'll notify you when you can enter the building."
+
+                    respondWith(response, fromNumber=sentFrom, toNumber=sentTo, messageToSend=textToSend)
+                    return Response(response.to_string(), mimetype='application/xml')
+
             else:
-                message.body('Our maximum capacity is {}'.format(cBusiness['rMax']))
-                message.body('Please try again with a smaller group size.')
+                textToSend += 'Our maximum capacity is {}. '.format(cBusiness['rMax'])
+                textToSend += 'Please try again with a smaller group size.'
+
+                respondWith(response, fromNumber=sentFrom, toNumber=sentTo, messageToSend=textToSend)
+                return Response(response.to_string(), mimetype='application/xml')
 
         else:
-            message.body('You are already in the queue!')
+            textToSend += 'You are already in the queue! '
 
             userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
-            message.body("You are currently #{} in line.".format(userPosition + 1))
+            textToSend += "You are currently #{} in line.".format(userPosition + 1)
 
+            respondWith(response, fromNumber=sentFrom, toNumber=sentTo, messageToSend=textToSend)
+            return Response(response.to_string(), mimetype='application/xml')
+        
         haveResponded = True
 
     if not haveResponded:
-        message.body("Sorry, I don't know how to help with that.")
-        message.body("If you want to join the queue, type 'JOIN'.")
+        textToSend += "Sorry, I don't know how to help with that."
 
-    return str(response)
+        respondWith(response, fromNumber=sentFrom, toNumber=sentTo, messageToSend=textToSend)
+        return Response(response.to_string(), mimetype='application/xml')
 
 @app.route('/update', methods=['GET', 'POST'])
 def update():

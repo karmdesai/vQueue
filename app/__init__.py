@@ -1,6 +1,6 @@
 from flask import Flask
 from config import Config
-from twilio.rest import Client
+from plivo import RestClient
 from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
@@ -10,8 +10,8 @@ app.config.from_object(Config)
 
 mail = Mail(app)
 
-client = Client(app.config['TWILIO_ACCOUNT_SID'], 
-    app.config['TWILIO_AUTH_TOKEN'])
+client = RestClient(app.config['PLIVO_AUTH_ID'], 
+    app.config['PLIVO_AUTH_TOKEN'])
 mongo = PyMongo(app)
 bootstrap = Bootstrap(app)
 
