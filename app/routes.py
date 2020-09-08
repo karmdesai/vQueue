@@ -53,7 +53,7 @@ def subtract():
 
         if cBusiness['rCustomers'] > 0:
             changeRCustomers(document=users, ID=cBusiness['_id'],
-                rCustomers=(cBusiness['rCustomers'] - 1))
+                rCustomers=cBusiness['rCustomers'] - 1)
 
         if len(cBusiness['rQueue']) > 0:
             nextCustomer = cBusiness['rQueue'][0]
@@ -69,7 +69,7 @@ def subtract():
                     inside.""".format(nextCustomer['cID'], nextCustomer['groupSize']))
 
                 changeRCustomers(document=users, ID=cBusiness['_id'],
-                    rCustomers=cBusiness['rCustomers'] + nextCustomer['groupSize'])
+                    rCustomers=cBusiness['rCustomers'] + nextCustomer['groupSize'] - 1)
 
                 removeFromQ(document=users, ID=cBusiness['_id'],
                     cID=nextCustomer['cID'])
@@ -275,13 +275,15 @@ def chat():
                 else:
                     message.body("You joined the queue!")
 
+                    addToQ(document=users, ID=cBusiness['_id'], 
+                        cID=sentFrom, groupSize=int(incomingMessage))
+
+                    cBusiness = users.find_one({'uPhone': sentTo})
+
                     userPosition = findAllValues(cBusiness['rQueue'], 'cID').index(sentFrom)
                     message.body("Your position is currently #{}.".format(userPosition + 1))
 
                     message.body("I'll notify you when you can enter the building.")
-
-                    addToQ(document=users, ID=cBusiness['_id'], 
-                        cID=sentFrom, groupSize=int(incomingMessage))
 
             else:
                 message.body('Our maximum capacity is {}'.format(cBusiness['rMax']))
