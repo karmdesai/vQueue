@@ -1,26 +1,21 @@
-from plivo import plivoxml
+import jwt
+from time import time
 
-def getAvailableNumbers(plivoClient, chosenCountry):
+def getAvailableNumbers(twilioClient, chosenCountry):
     allNums = []
-    localNums = plivoClient.numbers.search(country_iso=chosenCountry, type='local')
+    localNums = twilioClient.available_phone_numbers(chosenCountry).local.list(limit=50)
 
-    for record in localNums["objects"]:
-        allNums.append(record["number"])
+    for record in localNums:
+        allNums.append(record.phone_number)
 
     return allNums
 
-def createNumber(plivoClient, phoneNumber):
-    response = plivoClient.numbers.buy(number=phoneNumber)
+def createNumber(twilioClient, phoneNumber):
+    incomingNumber = twilioClient.incoming_phone_numbers \
+                        .create(phone_number=phoneNumber, sms_url='http://18ab06796c45.ngrok.io/chat')
 
-def sendMessage(plivoClient, fromNumber, toNumber, messageToSend):
-    sentMessage = plivoClient.messages.create(src=fromNumber, dst=toNumber, text=messageToSend)
-
-def respondWith(responseItem, fromNumber, toNumber, messageToSend):
-    responseItem.add(
-        plivoxml.MessageElement(
-            messageToSend,
-            src=toNumber,
-            dst=fromNumber))
+def sendMessage(twilioClient, fromNumber, toNumber, messageToSend):
+    sentMessage = twilioClient.messages.create(body=messageToSend, from_=fromNumber,to=toNumber)
 
 def isInt(x):
     try: 
