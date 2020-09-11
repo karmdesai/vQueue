@@ -1,3 +1,23 @@
+body {
+    background-color: #FDA75C;
+}
+
+p {
+    color: white !important;
+}
+
+.bg-color {
+    background-color: #FDA75C !important;
+}
+
+.new-primary {
+    color: #ffffff;
+}
+
+.text-primary {
+    color: #ffffff !important;
+}
+
 .myQ {
     max-height: 10vh;
     overflow-y: auto;

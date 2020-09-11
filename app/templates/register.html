@@ -2,10 +2,10 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 
 {% block appContent %}
-    <div class="row">
+    <div class="row new-primary">
         <div class="col-md-4">
             <h1>Register</h1>
-            {{ wtf.quick_form(form) }}
+            {{ wtf.quick_form(form, button_map={'submitNow': 'new-primary'}) }}
             {% for field, errors in form.errors.items() %}
             <div class="alert alert-danger">
                 <strong>Error</strong>: {{ ', '.join(errors) }}
