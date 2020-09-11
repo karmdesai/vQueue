@@ -1,21 +1,26 @@
 body {
-    background-color: #FDA75C;
+    background-color: #251b3d;
 }
 
 p {
-    color: white !important;
+    color: #fbfcfb;
+}
+
+a {
+    color: #fbfcfb;
 }
 
 .bg-color {
-    background-color: #FDA75C !important;
+    background-color: #251b3d !important;
 }
 
 .new-primary {
-    color: #ffffff;
+    color: #fbfcfb;
 }
 
-.text-primary {
-    color: #ffffff !important;
+.form-control:focus {
+    border-color: #fb9090;
+    box-shadow: inset 0 0.5px 0.5px #fb9090, 0 0 4px #fb9090;
 }
 
 .myQ {
@@ -24,5 +29,5 @@ p {
 }
 
 .x:hover {
-    fill: red;
+    fill: #fbb662;
 }
