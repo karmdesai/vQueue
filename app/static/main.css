@@ -1,13 +1,13 @@
 body {
-    background-color: #251b3d;
+    background-color: #fbfcfb;
 }
 
 p {
-    color: #fbfcfb;
+    color: #000000;
 }
 
 a {
-    color: #fbfcfb;
+    color: #000000;
 }
 
 .bg-color {
@@ -15,7 +15,12 @@ a {
 }
 
 .new-primary {
-    color: #fbfcfb;
+    color: #000000;
+}
+
+.new-accent {
+    background-color: #fb9090;
+    color: #fb9090;
 }
 
 .form-control:focus {
