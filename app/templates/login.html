@@ -1,25 +1,27 @@
 {% extends "base.html" %}
-{% import 'bootstrap/wtf.html' as wtf %}
 
 {% block appContent %}
-    <div class="row new-primary">
-        <div class="col-md-4">
-            <h1>Sign In</h1>
-            {{ wtf.quick_form(form, button_map={'submitNow': 'new-accent'}) }}
-            {% for field, errors in form.errors.items() %}
-            <div class="alert alert-danger">
-                <strong>Error</strong>: {{ ', '.join(errors) }}
-            </div>
-            {% endfor %}
+  <div class="row new-primary">
+    <div class="col-md-4">
+      <h1>Sign In</h1>
+      {{ wtf.quick_form(form, button_map={'submitNow': 'new-accent'}) }}
+      {% for field, errors in form.errors.items() %}
+      <div class="alert alert-danger">
+        <strong>Error</strong>: {{ ', '.join(errors) }}
+      </div>
+      {% endfor %}
             
-            <div class="mb-4"></div>
-            <p>New User? <a href="{{ url_for('register') }}">Register Here</a></p>
-            <p>Forgot Your Password? <a href="{{ url_for('reset') }}">Click to Reset</a></p>
-        </div>
-        <div class="col-md-1"></div>
-        <div class="col-md-6">
-            <img src="{{ url_for('static', filename='img/computer.jpg') }}" class="img-fluid" fill="blue">
-        </div>
-        <div class="col-md-1"></div>
+      <div class="mb-4"></div>
+      <p>New User? <a href="{{ url_for('register') }}">Register Here</a></p>
+      <p>Forgot Your Password? <a href="{{ url_for('reset') }}">Click to Reset</a></p>
     </div>
+
+    <div class="col-md-1"></div>
+
+    <div class="col-md-6">
+      <img src="{{ url_for('static', filename='img/computer.jpg') }}" class="img-fluid" fill="blue">
+    </div>
+
+    <div class="col-md-1"></div>
+  </div>
 {% endblock %}

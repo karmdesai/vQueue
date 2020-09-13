@@ -1,21 +1,20 @@
 {% extends "base.html" %}
-{% import 'bootstrap/wtf.html' as wtf %}
 
 {% block appContent %}
-    <div class="row new-primary">
-        <div class="col-md-4">
-            <h1>Register</h1>
-            {{ wtf.quick_form(form, button_map={'submitNow': 'new-accent'}) }}
-            {% for field, errors in form.errors.items() %}
-            <div class="alert alert-danger">
-                <strong>Error</strong>: {{ ', '.join(errors) }}
-            </div>
-            {% endfor %}
+  <div class="">
+    <div class="">
+      <h1>Register</h1>
+      {{ wtf.quick_form(form, button_map={'submitNow': 'new-accent'}) }}
+      {% for field, errors in form.errors.items() %}
+        <div class="">
+          <strong>Error</strong>: {{ ', '.join(errors) }}
         </div>
-        <div class="col-md-1"></div>
-        <div class="col-md-6">
-            <img src="{{ url_for('static', filename='img/system.png') }}" class="img-fluid">
-        </div>
-        <div class="col-md-1"></div>
+      {% endfor %}
     </div>
+    <div class=""></div>
+    <div class="">
+      <img src="{{ url_for('static', filename='img/system.png') }}" class="">
+    </div>
+    <div class=""></div>
+  </div>
 {% endblock %}
