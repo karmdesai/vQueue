@@ -2,16 +2,24 @@
 
 {% block appContent %}
   <h1>Request A Password Reset</h1>
-  <div class="">
+  <div class="columns">
     <div class=""></div>
-      <div class="">
-        {{ wtf.quick_form(form) }}
+      <div class="column">
         
-        {% for field, errors in form.errors.items() %}
-          <div class="">
-            <strong>Error</strong>: {{ ', '.join(errors) }}
-          </div>
-        {% endfor %}
+        <form action="" method="post" novalidate>
+          {{ form.hidden_tag() }}
+          <p>
+            {{ form.uEmail.label }}<br>
+            {{ form.uEmail(size=32) }}
+  
+            {% for error in form.uEmail.errors %}
+              <div class="notification is-danger">
+                [{{ error }}]
+              </div>
+            {% endfor %}
+          </p>
+          <p>{{ form.submitNow() }}</p>
+        </form>
       </div>
   </div>
 {% endblock %}

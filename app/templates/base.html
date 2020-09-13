@@ -1,5 +1,5 @@
 {% block styles %}
-    
+  <link rel="stylesheet" href="{{url_for('static', filename='bulma-0.9.0/css/bulma.css')}}">
 {% endblock %}
 
 {% block title %}
@@ -11,36 +11,44 @@
 {% endblock %}
 
 {% block navbar %}
-  <nav class="">
-    <div>
-      <a class="" href="{{ url_for('index') }}">vQueue</a>
-      <button class="" type="button">
-        <span class=""></span>
-      </button>
+  <nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="{{ url_for('index') }}">vQueue</a>
+
+      <a role="button" class="navbar-burger burger" aria-label="menu" aria-expanded="false">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
     </div>
 
-    <div class="" id="">
-      <ul class="">
-        {% if not session['uName'] %}
-        <li class="">
-          <a class="" href="{{ url_for('login') }}">Login</a>
-        </li>
-        {% else %}
-        <li class="">
-          <a class="" href="{{ url_for('index') }}">Dashboard</a>
-        </li>
-        <li class="">
-          <a class="" href="{{ url_for('queue') }}">Queue</a>
-        </li>
-        <li class="">
-          <a class="" href="{{ url_for('logout') }}">Logout</a>
-        </li>
+    <div class="navbar-menu">
+      <div class="navbar-start">
+        {% if session['uName'] %}
+          <a class="navbar-item" href="{{ url_for('index') }}">Dashboard</a>
+          <a class="navbar-item" href="{{ url_for('queue') }}">Queue</a>
         {% endif %}
-      </ul>
+      </div>
+      <div class="navbar-end">
+        <div class="navbar-item">
+          <div class="buttons">
+            {% if not session['uName'] %}
+              <a class="button is-primary" href="{{ url_for('register') }}">
+                <strong>Register</strong>
+              </a>
+              <a class="button is-light"  href="{{ url_for('login') }}">
+                Sign In
+              </a>
+            {% else %}
+              <a class="button is-light" href="{{ url_for('logout') }}">
+                <strong>Logout</strong>
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
     </div>   
   </nav>
-
-  <div class=""></div>
 {% endblock %}
 
 {% block content %}
@@ -48,7 +56,7 @@
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         {% for message in messages %}
-          <div class="" role="alert">{{ message }}</div>
+          <div class="notification is-primary" role="alert">{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}

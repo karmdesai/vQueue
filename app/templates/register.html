@@ -1,20 +1,58 @@
 {% extends "base.html" %}
 
 {% block appContent %}
-  <div class="">
-    <div class="">
+  <div class="columns">
+    <div class="column">
       <h1>Register</h1>
-      {{ wtf.quick_form(form, button_map={'submitNow': 'new-accent'}) }}
-      {% for field, errors in form.errors.items() %}
-        <div class="">
-          <strong>Error</strong>: {{ ', '.join(errors) }}
-        </div>
-      {% endfor %}
+      <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+          {{ form.uName.label }}<br>
+          {{ form.uName(size=32) }}
+
+          {% for error in form.uName.errors %}
+            <div class="notification is-danger">
+              [{{ error }}]
+            </div>
+          {% endfor %}
+        </p>
+        <p>
+          {{ form.uPassword.label }}<br>
+          {{ form.uPassword(size=32) }}
+
+          {% for error in form.uPassword.errors %}
+            <div class="notification is-danger">
+              [{{ error }}]
+            </div>
+          {% endfor %}
+        </p>
+        <p>
+          {{ form.bName.label }}<br>
+          {{ form.bName(size=32) }}
+
+          {% for error in form.bName.errors %}
+            <div class="notification is-danger">
+              [{{ error }}]
+            </div>
+          {% endfor %}
+        </p>
+        <p>
+          {{ form.uPhone.label }}<br>
+          {{ form.uPhone(size=32) }}
+
+          {% for error in form.uPhone.errors %}
+            <div class="notification is-danger">
+              [{{ error }}]
+            </div>
+          {% endfor %}
+        </p>
+        <p>{{ form.submitNow() }}</p>
+      </form>
     </div>
-    <div class=""></div>
-    <div class="">
+
+    <div class="column"></div>
+    <div class="column">
       <img src="{{ url_for('static', filename='img/system.png') }}" class="">
     </div>
-    <div class=""></div>
   </div>
 {% endblock %}

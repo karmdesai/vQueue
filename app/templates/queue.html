@@ -1,24 +1,22 @@
 {% extends "base.html" %}
 
 {% block appContent %}
-  <div class="row mb-3"></div>
-
-  <div class="text-center new-primary">
-    <h1>{{ bName }}'s Queue</h1>
-    <p class="display-5">Your max capacity is set to <strong>
-      {{ rMax }}</strong> customers.
-    </p>
-    <p class="display-5">Your vQueue phone number is<strong>
-      {{ uPhone }}</strong>.
-    </p>
+  <div class="columns">
+    <div class="column">
+      <h1>{{ bName }}'s Queue</h1>
+      <p>Your max capacity is set to <strong>
+        {{ rMax }}</strong> customers.
+      </p>
+      <p>Your vQueue phone number is<strong>
+        {{ uPhone }}</strong>.
+      </p>
+    </div>
   </div>
-
-  <div class="row mb-4"></div>
         
-  <div class="row text-center new-primary">
-    <div class="col-md-3">
+  <div class="columns">
+    <div class="column">
       <h3>Customers Currently Inside</h3>
-      <h1 class='rCust display-1'>{{ rCustomers }}</h1>
+      <h1 class='rCust'>{{ rCustomers }}</h1>
       <a href="{{ url_for('subtract') }}">
         <svg width="3em" height="3em" viewBox="0 0 16 16" class="bi bi-arrow-down-circle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
           <path fill-rule="evenodd" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 5a.5.5 0 0 0-1 0v4.793L5.354 7.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 9.793V5z"/>
@@ -26,7 +24,7 @@
       </a>
     </div>
 
-    <div class="col-md-6">
+    <div class="column">
       <h1>Queue</h1>
       <div class='myQ'>
         {% for eachQueuer in rQueue %}
@@ -48,18 +46,34 @@
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="column">
       <h3>Add Customer Manually</h3>
-      {{ wtf.quick_form(form, button_map={'submitNow': 'new-accent'}) }}
+      <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+          {{ form.cID.label }}<br>
+          {{ form.cID(size=32) }}
 
-      {% for field, errors in form.errors.items() %}
-        <div class="alert alert-danger">
-          <strong>Error</strong>: {{ ', '.join(errors) }}
-        </div>
-      {% endfor %}
+          {% for error in form.cID.errors %}
+            <div class="notification is-danger">
+              [{{ error }}]
+            </div>
+          {% endfor %}
+        </p>
+        <p>
+          {{ form.groupSize.label }}<br>
+          {{ form.groupSize(size=32) }}
+
+          {% for error in form.groupSize.errors %}
+            <div class="notification is-danger">
+              [{{ error }}]
+            </div>
+          {% endfor %}
+        </p>
+        <p>{{ form.manualAdd() }}</p>
+      </form>
     </div>
   </div>
-
 {% endblock %}
 {% block script %}
   <script src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>

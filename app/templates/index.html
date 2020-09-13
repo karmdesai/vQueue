@@ -1,21 +1,38 @@
 {% extends "base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
 
 {% block appContent %}
-  <h1 class="new-primary">Hi, {{ bName }}!</h1>
-  <div class="row mb-3"></div>
+  <h1>Hi, {{ bName }}!</h1>
 
-  <div class="row new-primary">
-    <div class="col-md-4">
+  <div class="columns">
+    <div class="column">
       <h3>Start a New Session</h1>
-      {{ wtf.quick_form(form, button_map={'submitNow': 'new-accent'}) }}
-      {% for field, errors in form.errors.items() %}
-        <div class="alert alert-danger">
-          <strong>Error</strong>: {{ ', '.join(errors) }}
-        </div>
-      {% endfor %}
+      <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+          {{ form.rMax.label }}<br>
+          {{ form.rMax(size=32) }}
+
+          {% for error in form.rCustomers.errors %}
+            <div class="notification is-danger">
+              [{{ error }}]
+            </div>
+          {% endfor %}
+        </p>
+        <p>
+          {{ form.rCustomers.label }}<br>
+          {{ form.rCustomers(size=32) }}
+
+          {% for error in form.rCustomers.errors %}
+            <div class="notification is-danger">
+              [{{ error }}]
+            </div>
+          {% endfor %}
+        </p>
+        <p>{{ form.submitNow() }}</p>
+      </form>
+
     </div>
-    <div class="col-md-4">
+    <div class="column">
       <h3>Delete Your Account</h1>
       <p>
         Deleting your account will cancel your subscription and you will lose access to vQueue.
