@@ -2,13 +2,7 @@
   <link rel="stylesheet" href="{{url_for('static', filename='bulma-0.9.0/css/bulma.css')}}">
 {% endblock %}
 
-{% block title %}
-  {% if title %}
-    {{ title }} — vQueue
-  {% else %}
-    Welcome to vQueue!
-  {% endif %}
-{% endblock %}
+{% block title %}{% if title %}{{ title }} — vQueue{% else %}Welcome to vQueue!{% endif %}{% endblock %}
 
 {% block navbar %}
   <nav class="navbar" role="navigation" aria-label="main navigation">
