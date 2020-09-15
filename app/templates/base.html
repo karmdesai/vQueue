@@ -2,7 +2,13 @@
   <link rel="stylesheet" href="{{url_for('static', filename='bulma-0.9.0/css/bulma.css')}}">
 {% endblock %}
 
-{% block title %}{% if title %}{{ title }} — vQueue{% else %}Welcome to vQueue!{% endif %}{% endblock %}
+<title>
+  {% if title %}
+    {{ title }} — vQueue
+  {% else %}
+    Welcome to vQueue!
+  {% endif %}
+</title>
 
 {% block navbar %}
   <nav class="navbar" role="navigation" aria-label="main navigation">
@@ -30,7 +36,7 @@
               <a class="button is-primary" href="{{ url_for('register') }}">
                 <strong>Register</strong>
               </a>
-              <a class="button is-light"  href="{{ url_for('login') }}">
+              <a class="button is-light" href="{{ url_for('login') }}">
                 Sign In
               </a>
             {% else %}

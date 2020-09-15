@@ -6,16 +6,24 @@
       <h1 class="title is-1">Sign In</h1>
       <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
-        <p>
-          {{ form.uName.label }}<br>
+
+        {{ form.uName.label }}
+        <div class="control has-icons-left has-icons-right">
           {{ form.uName(size=32) }}
+          <span class="icon is-small is-left">
+            <i class="fas fa-envelope"></i>
+          </span>
+          <span class="icon is-small is-right">
+            <i class="fas fa-exclamation-triangle"></i>
+          </span>
+        </div>
 
           {% for error in form.uName.errors %}
             <div class="notification is-danger">
               [{{ error }}]
             </div>
           {% endfor %}
-        </p>
+
         <p>
           {{ form.uPassword.label }}<br>
           {{ form.uPassword(size=32) }}
