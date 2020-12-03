@@ -3,7 +3,7 @@
 {% block appContent %}
   <div class="columns">
     <div class="column">
-      <h1>{{ bName }}'s Queue</h1>
+      <h2 class="title is-2"><span class="is-italic">{{ bName }}</span>'s Queue</h2>
       <p>Your max capacity is set to <strong>
         {{ rMax }}</strong> customers.
       </p>
@@ -14,9 +14,9 @@
   </div>
         
   <div class="columns">
-    <div class="column">
-      <h3>Customers Currently Inside</h3>
-      <h1 class='rCust'>{{ rCustomers }}</h1>
+    <div class="column has-text-centered">
+      <h4 class="title is-4">Customers Currently Inside</h4>
+      <h1 class='title is-1'>{{ rCustomers }}</h1>
       <a href="{{ url_for('subtract') }}">
         <svg width="3em" height="3em" viewBox="0 0 16 16" class="bi bi-arrow-down-circle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
           <path fill-rule="evenodd" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 5a.5.5 0 0 0-1 0v4.793L5.354 7.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 9.793V5z"/>
@@ -24,8 +24,8 @@
       </a>
     </div>
 
-    <div class="column">
-      <h1>Queue</h1>
+    <div class="column has-text-centered">
+      <h4 class="title is-4">Queue</h4>
       <div class='myQ'>
         {% for eachQueuer in rQueue %}
           <div class='qCust'>
@@ -47,29 +47,39 @@
     </div>
 
     <div class="column">
-      <h3>Add Customer Manually</h3>
+      <h4 class="title is-4">Add Customer Manually</h4>
       <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
-        <p>
-          {{ form.cID.label }}<br>
+        <div class="field">
+          <label class="label is-size-5">
+            {{ form.cID.label }}
+          </label>
           {{ form.cID(size=32) }}
 
           {% for error in form.cID.errors %}
-            <div class="notification is-danger">
-              [{{ error }}]
+            <div class="container mt-3 mb-3 is-size-4">
+              <div class="notification is-danger">
+                [{{ error }}]
+              </div>
             </div>
           {% endfor %}
-        </p>
-        <p>
-          {{ form.groupSize.label }}<br>
+        </div>
+
+        <div class="field">
+          <label class="label is-size-5">
+            {{ form.groupSize.label }}
+          </label>
           {{ form.groupSize(size=32) }}
 
           {% for error in form.groupSize.errors %}
-            <div class="notification is-danger">
-              [{{ error }}]
+            <div class="container mt-3 mb-3 is-size-4">
+              <div class="notification is-danger">
+                [{{ error }}]
+              </div>
             </div>
           {% endfor %}
-        </p>
+        </div>
+
         <p>{{ form.manualAdd() }}</p>
       </form>
     </div>

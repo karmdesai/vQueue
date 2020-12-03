@@ -1,5 +1,7 @@
 {% block styles %}
   <link rel="stylesheet" href="{{url_for('static', filename='bulma-0.9.0/css/bulma.css')}}">
+  <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="{{url_for('static', filename='main.css')}}">
 {% endblock %}
 
 <title>
@@ -11,7 +13,7 @@
 </title>
 
 {% block navbar %}
-  <nav class="navbar" role="navigation" aria-label="main navigation">
+  <nav class="navbar is-size-4" role="navigation" aria-label="main navigation">
     <div class="navbar-brand">
       <a class="navbar-item" href="{{ url_for('index') }}">vQueue</a>
 
@@ -24,10 +26,6 @@
 
     <div class="navbar-menu">
       <div class="navbar-start">
-        {% if session['uName'] %}
-          <a class="navbar-item" href="{{ url_for('index') }}">Dashboard</a>
-          <a class="navbar-item" href="{{ url_for('queue') }}">Queue</a>
-        {% endif %}
       </div>
       <div class="navbar-end">
         <div class="navbar-item">
@@ -40,6 +38,12 @@
                 Sign In
               </a>
             {% else %}
+              <a class="button is-light" href="{{ url_for('index') }}">
+                <strong>Dashboard</strong>
+              </a>
+              <a class="button is-light" href="{{ url_for('queue') }}">
+                <strong>Queue</strong>
+              </a>
               <a class="button is-light" href="{{ url_for('logout') }}">
                 <strong>Logout</strong>
               </a>
@@ -49,6 +53,9 @@
       </div>
     </div>   
   </nav>
+  <div class="mb-4">
+    <!-- Spacing -->
+  </div>
 {% endblock %}
 
 {% block content %}

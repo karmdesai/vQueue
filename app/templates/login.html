@@ -4,45 +4,54 @@
   <div class="columns">
     <div class="column">
       <h1 class="title is-1">Sign In</h1>
-      <form action="" method="post" novalidate>
+      <form class="is-size-4" action="" method="post" novalidate>
         {{ form.hidden_tag() }}
-
-        {{ form.uName.label }}
-        <div class="control has-icons-left has-icons-right">
+        <div class="field">
+          <label class="label is-size-5">
+            <span class="icon is-small is-left">
+              <i class="fas fa-envelope"></i>
+            </span>
+            {{ form.uName.label }}
+          </label>
           {{ form.uName(size=32) }}
-          <span class="icon is-small is-left">
-            <i class="fas fa-envelope"></i>
-          </span>
-          <span class="icon is-small is-right">
-            <i class="fas fa-exclamation-triangle"></i>
-          </span>
-        </div>
 
           {% for error in form.uName.errors %}
+          <div class="container mt-3 mb-3 is-size-4">
             <div class="notification is-danger">
               [{{ error }}]
             </div>
+          </div>
           {% endfor %}
+        </div>
 
-        <p>
-          {{ form.uPassword.label }}<br>
+        <div class="field">
+          <label class="label is-size-5">
+            <span class="icon is-small is-left">
+              <i class="fas fa-key"></i>
+            </span>
+            {{ form.uPassword.label }}
+          </label>
           {{ form.uPassword(size=32) }}
 
           {% for error in form.uPassword.errors %}
-            <div class="notification is-danger">
-              [{{ error }}]
+            <div class="container mt-3 mb-3 is-size-4">
+              <div class="notification is-danger">
+                [{{ error }}]
+              </div>
             </div>
           {% endfor %}
-        </p>
+        </div>
+
         <p>{{ form.submitNow() }}</p>
       </form>
             
-      <p>New User? <a href="{{ url_for('register') }}">Register Here</a></p>
-      <p>Forgot Your Password? <a href="{{ url_for('reset') }}">Click to Reset</a></p>
+      <div class="container">
+        <p class="is-size-5">New User? <a class="is-italic" href="{{ url_for('register') }}">Register Here</a></p>
+        <p class="is-size-5">Forgot Your Password? <a class="is-italic" href="{{ url_for('reset') }}">Click to Reset</a></p>
+      </div>
     </div>
 
     <div class="column"></div>
-
     <div class="column"></div>
   </div>
 {% endblock %}

@@ -1,39 +1,52 @@
 {% extends "base.html" %}
 
 {% block appContent %}
-  <h1>Hi, {{ bName }}!</h1>
+  <div class="mt-3 mb-6">
+    <h1 class="title is-1">Hi, <span class="is-italic">{{ bName }}!</span></h1>
+  </div>
 
   <div class="columns">
-    <div class="column">
-      <h3>Start a New Session</h1>
+    <div class="column is-two-fifths">
+      <h2 class="title is-2">Start a New Session</h2>
       <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
-        <p>
-          {{ form.rMax.label }}<br>
+        <div class="field">
+          <label class="label is-size-6">
+            {{ form.rMax.label }}
+          </label>
           {{ form.rMax(size=32) }}
 
-          {% for error in form.rCustomers.errors %}
-            <div class="notification is-danger">
-              [{{ error }}]
+          {% for error in form.rMax.errors %}
+            <div class="container mt-3 mb-3 is-size-4">
+              <div class="notification is-danger">
+                [{{ error }}]
+              </div>
             </div>
           {% endfor %}
-        </p>
-        <p>
-          {{ form.rCustomers.label }}<br>
+        </div>
+
+        <div class="field">
+          <label class="label is-size-6">
+            {{ form.rCustomers.label }}
+          </label>
           {{ form.rCustomers(size=32) }}
 
           {% for error in form.rCustomers.errors %}
-            <div class="notification is-danger">
-              [{{ error }}]
+            <div class="container mt-3 mb-3 is-size-4">
+              <div class="notification is-danger">
+                [{{ error }}]
+              </div>
             </div>
           {% endfor %}
-        </p>
+        </div>
+
         <p>{{ form.submitNow() }}</p>
       </form>
-
     </div>
-    <div class="column">
-      <h3>Delete Your Account</h1>
+
+    <div class="column is-one-fifth"></div>
+    <div class="column is-two-fifths">
+      <h2 class="title is-2">Delete Your Account</h2>
       <p>
         Deleting your account will cancel your subscription and you will lose access to vQueue.
         You will also lose your phone number and others will be able to claim it. Proceed with caution.
