@@ -1,5 +1,4 @@
+# folders
 venv/
 __pycache__/
 .vscode/
-
-config.py
