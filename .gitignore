@@ -1,5 +1,7 @@
+# folders
 venv/
 __pycache__/
 .vscode/
 
+# configuration variables
 config.py

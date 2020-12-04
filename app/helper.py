@@ -12,7 +12,7 @@ def getAvailableNumbers(twilioClient, chosenCountry):
 
 def createNumber(twilioClient, phoneNumber):
     incomingNumber = twilioClient.incoming_phone_numbers \
-                        .create(phone_number=phoneNumber, sms_url='http://fdca13d1832e.ngrok.io/chat')
+                        .create(phone_number=phoneNumber, sms_url='https://vqueue.ca/chat')
 
 def sendMessage(twilioClient, fromNumber, toNumber, messageToSend):
     sentMessage = twilioClient.messages.create(body=messageToSend, from_=fromNumber,to=toNumber)
