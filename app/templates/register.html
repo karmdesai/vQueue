@@ -3,79 +3,53 @@
 {% block appContent %}
   <div class="columns">
     <div class="column">
-      <h1 class="title is-1">Register</h1>
+      <h1>Register</h1>
       <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
-        <div class="field">
-          <label class="label is-size-6">
-            {{ form.uName.label }}
-          </label>
+        <p>
+          {{ form.uName.label }}<br>
           {{ form.uName(size=32) }}
 
           {% for error in form.uName.errors %}
-          <div class="container mt-3 mb-3 is-size-4">
             <div class="notification is-danger">
               [{{ error }}]
             </div>
-          </div>
           {% endfor %}
-        </div>
-
-        <div class="field">
-          <label class="label is-size-6">
-            {{ form.uPassword.label }}
-          </label>
+        </p>
+        <p>
+          {{ form.uPassword.label }}<br>
           {{ form.uPassword(size=32) }}
 
           {% for error in form.uPassword.errors %}
-            <div class="container mt-3 mb-3 is-size-4">
-              <div class="notification is-danger">
-                [{{ error }}]
-              </div>
+            <div class="notification is-danger">
+              [{{ error }}]
             </div>
           {% endfor %}
-        </div>
-
-        <div class="field">
-          <label class="label is-size-6">
-            {{ form.bName.label }}
-          </label>
+        </p>
+        <p>
+          {{ form.bName.label }}<br>
           {{ form.bName(size=32) }}
 
           {% for error in form.bName.errors %}
-            <div class="container mt-3 mb-3 is-size-4">
-              <div class="notification is-danger">
-                [{{ error }}]
-              </div>
+            <div class="notification is-danger">
+              [{{ error }}]
             </div>
           {% endfor %}
-        </div>
-
-        <div class="field">
-          <label class="label is-size-6">
-            {{ form.uPhone.label }}
-          </label>
-          <div class="select">
-            <select>
-              {% for eachChoice in form.uPhone %}
-              {{ eachChoice }}
-              {% endfor %}
-            </select>
-          </div>
+        </p>
+        <p class="pb-2">
+          {{ form.uPhone.label }}<br>
+          {{ form.uPhone(size=32) }}
 
           {% for error in form.uPhone.errors %}
-            <div class="container mt-3 mb-3 is-size-4">
-              <div class="notification is-danger">
-                [{{ error }}]
-              </div>
+            <div class="notification is-danger">
+              [{{ error }}]
             </div>
           {% endfor %}
-        </div>
-        
+        </p>
         <p>{{ form.submitNow() }}</p>
       </form>
     </div>
-    <div class="column"></div>
+
     <div class="column"></div>
   </div>
 {% endblock %}
